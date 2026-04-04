@@ -683,43 +683,6 @@ function PortfolioSection() {
   return (
     <section id="portfolio" className="relative py-24 px-6 section-divider">
       <div className="max-w-6xl mx-auto">
-        {/* Hero collage */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="relative rounded-3xl overflow-hidden mb-16"
-          style={{ height: "320px" }}
-        >
-          <img
-            src="/assets/generated/crisp-media-hero.dim_1200x600.jpg"
-            alt="Crisp Media Portfolio Showcase"
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(7,20,50,0.65) 0%, rgba(5,10,26,0.5) 100%)",
-            }}
-          >
-            <p
-              className="text-xs font-semibold uppercase tracking-[0.35em] mb-3"
-              style={{ color: "#C9B07A" }}
-            >
-              Crisp Media
-            </p>
-            <h2
-              className="text-4xl md:text-5xl font-bold text-white text-center leading-tight"
-              style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
-            >
-              Crafted with Passion
-            </h2>
-          </div>
-        </motion.div>
-
         <div className="text-center mb-12">
           <h2
             className="text-3xl md:text-4xl font-bold text-white"
