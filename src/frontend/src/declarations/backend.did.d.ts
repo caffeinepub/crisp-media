@@ -54,6 +54,8 @@ export interface _SERVICE {
   >,
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'claimAdminAccess' : ActorMethod<[], undefined>,
+  'isAdminAssigned' : ActorMethod<[], boolean>,
   'addPortfolioItem' : ActorMethod<
     [string, string, ExternalBlob, string, string],
     undefined

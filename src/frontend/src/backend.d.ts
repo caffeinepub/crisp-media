@@ -33,6 +33,8 @@ export enum UserRole {
 }
 export interface backendInterface {
     _initializeAccessControlWithSecret(secret: string): Promise<void>;
+    claimAdminAccess(): Promise<void>;
+    isAdminAssigned(): Promise<boolean>;
     addPortfolioItem(title: string, category: string, media: ExternalBlob, mediaType: string, description: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     deletePortfolioItem(index: bigint): Promise<void>;

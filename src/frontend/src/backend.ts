@@ -125,6 +125,8 @@ export interface backendInterface {
     _caffeineStorageRefillCashier(refillInformation: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult>;
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
+    claimAdminAccess(): Promise<void>;
+    isAdminAssigned(): Promise<boolean>;
     addPortfolioItem(title: string, category: string, media: ExternalBlob, mediaType: string, description: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     deletePortfolioItem(index: bigint): Promise<void>;
@@ -332,6 +334,32 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.isCallerAdmin();
+            return result;
+        }
+    }
+    async claimAdminAccess(): Promise<void> {
+        if (this.processError) {
+            try {
+                await this.actor.claimAdminAccess();
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            await this.actor.claimAdminAccess();
+        }
+    }
+    async isAdminAssigned(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.isAdminAssigned();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.isAdminAssigned();
             return result;
         }
     }

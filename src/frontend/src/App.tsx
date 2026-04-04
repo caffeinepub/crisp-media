@@ -998,16 +998,13 @@ function AdminPanel() {
   const { data: portfolioItems, isLoading: itemsLoading } = usePortfolioItems();
 
   // Admin token state
-  const [adminToken, setAdminToken] = useState("");
-
-  // Claim admin access mutation using secret token
+  // Claim admin access mutation - first login becomes admin, no token needed
   const claimAdminMutation = useMutation({
-    mutationFn: async (token: string) => {
+    mutationFn: async () => {
       if (!actor || !identity) throw new Error("Not connected");
-      await actor._initializeAccessControlWithSecret(token);
+      await actor.claimAdminAccess();
     },
     onSuccess: () => {
-      setAdminToken("");
       queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
       queryClient.invalidateQueries({ queryKey: ["actor"] });
     },
@@ -1148,66 +1145,51 @@ function AdminPanel() {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-card rounded-2xl p-10 mb-8"
+            className="glass-card rounded-2xl p-10 mb-8 text-center"
             style={{ border: "1px solid rgba(201,176,122,0.3)" }}
             data-ocid="admin.claim.panel"
           >
             <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 mx-auto"
               style={{ backgroundColor: "rgba(201,176,122,0.12)" }}
             >
-              <Settings className="w-5 h-5" style={{ color: "#C9B07A" }} />
+              <Settings className="w-6 h-6" style={{ color: "#C9B07A" }} />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">
-              Activate Admin Access
+            <h3 className="text-xl font-semibold text-white mb-3">
+              Claim Admin Access
             </h3>
-            <p className="text-sm mb-6 max-w-sm" style={{ color: "#A9B2C7" }}>
-              Enter your Caffeine admin token to activate admin access. Find it
-              in your Caffeine project dashboard.
+            <p
+              className="text-sm mb-8 max-w-sm mx-auto"
+              style={{ color: "#A9B2C7" }}
+            >
+              Click the button below to activate your admin account. This only
+              works once — you will be the sole admin.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md">
-              <input
-                type="password"
-                placeholder="Paste your admin token here..."
-                value={adminToken}
-                onChange={(e) => setAdminToken(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && adminToken.trim()) {
-                    claimAdminMutation.mutate(adminToken.trim());
-                  }
-                }}
-                className="flex-1 rounded-lg px-4 py-2 text-sm outline-none"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(201,176,122,0.3)",
-                  color: "#fff",
-                }}
-                data-ocid="admin.token.input"
-              />
-              <Button
-                onClick={() => claimAdminMutation.mutate(adminToken.trim())}
-                disabled={claimAdminMutation.isPending || !adminToken.trim()}
-                className="font-semibold px-6 shrink-0"
-                style={{ backgroundColor: "#C9B07A", color: "#071432" }}
-                data-ocid="admin.claim.button"
-              >
-                {claimAdminMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Activating...
-                  </>
-                ) : (
-                  "Activate"
-                )}
-              </Button>
-            </div>
+            <Button
+              onClick={() => claimAdminMutation.mutate()}
+              disabled={claimAdminMutation.isPending}
+              className="font-semibold px-10 py-3 text-base"
+              style={{ backgroundColor: "#C9B07A", color: "#071432" }}
+              data-ocid="admin.claim.button"
+            >
+              {claimAdminMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Claiming...
+                </>
+              ) : (
+                "Claim Admin"
+              )}
+            </Button>
             {claimAdminMutation.isError && (
               <p
-                className="mt-3 text-xs"
+                className="mt-4 text-sm"
                 style={{ color: "#ef4444" }}
                 data-ocid="admin.claim.error_state"
               >
-                Invalid token. Please check your Caffeine project settings.
+                {claimAdminMutation.error instanceof Error
+                  ? claimAdminMutation.error.message
+                  : "Admin has already been claimed or an error occurred."}
               </p>
             )}
           </motion.div>
