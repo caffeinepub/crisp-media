@@ -147,6 +147,18 @@ actor {
   include MixinStorage();
   include MixinAuthorization(accessControlState);
 
+  // Claim admin access - only the first caller becomes admin (one-time operation)
+  public shared ({ caller }) func claimAdminAccess() : async () {
+    if (caller.isAnonymous()) {
+      Runtime.trap("Anonymous callers cannot claim admin access");
+    };
+    if (accessControlState.adminAssigned) {
+      Runtime.trap("Admin has already been claimed");
+    };
+    accessControlState.userRoles.add(caller, #admin);
+    accessControlState.adminAssigned := true;
+  };
+
   // Public operation - no auth required
   public query func getPortfolioItems() : async [PortfolioItem] {
     portfolioItems.toArray();
@@ -200,4 +212,3 @@ actor {
     movePortfolioItemToEndInternal(index);
   };
 };
-

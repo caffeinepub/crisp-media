@@ -188,7 +188,6 @@ function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
   const { identity, login, clear, isLoggingIn } = useInternetIdentity();
-  const { data: isAdmin } = useIsCallerAdmin();
   const isLoggedIn = !!identity;
 
   useEffect(() => {
@@ -264,21 +263,19 @@ function Navbar() {
           {/* Admin button - subtle ghost style */}
           {isLoggedIn ? (
             <div className="flex items-center gap-2">
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => scrollTo("admin-panel")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 hover:bg-white/10"
-                  style={{
-                    borderColor: "rgba(201,176,122,0.4)",
-                    color: "#C9B07A",
-                  }}
-                  data-ocid="nav.admin.button"
-                >
-                  <Settings className="w-3 h-3" />
-                  Manage
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => scrollTo("admin-panel")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 hover:bg-white/10"
+                style={{
+                  borderColor: "rgba(201,176,122,0.4)",
+                  color: "#C9B07A",
+                }}
+                data-ocid="nav.admin.button"
+              >
+                <Settings className="w-3 h-3" />
+                Manage
+              </button>
               <button
                 type="button"
                 onClick={clear}
@@ -382,14 +379,32 @@ function Navbar() {
                 </button>
               )}
               {isLoggedIn && (
-                <button
-                  type="button"
-                  onClick={clear}
-                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-full text-xs font-medium border border-white/15 text-white/50 hover:text-white transition-all"
-                  data-ocid="nav.mobile.logout.button"
-                >
-                  <LogOut className="w-3 h-3" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      scrollTo("admin-panel");
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2.5 rounded-full text-xs font-medium border transition-all"
+                    style={{
+                      borderColor: "rgba(201,176,122,0.4)",
+                      color: "#C9B07A",
+                    }}
+                    data-ocid="nav.mobile.admin.button"
+                  >
+                    <Settings className="w-3 h-3" />
+                    Manage
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clear}
+                    className="flex items-center gap-1.5 px-3 py-2.5 rounded-full text-xs font-medium border border-white/15 text-white/50 hover:text-white transition-all"
+                    data-ocid="nav.mobile.logout.button"
+                  >
+                    <LogOut className="w-3 h-3" />
+                  </button>
+                </div>
               )}
             </div>
           </motion.div>

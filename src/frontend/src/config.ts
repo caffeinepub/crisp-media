@@ -154,8 +154,15 @@ export async function createActorWithConfig(
   );
 
   const MOTOKO_DEDUPLICATION_SENTINEL = "!caf!";
+  // Sentinel for direct URL storage (Google Drive links etc.) — no blob upload needed
+  const DIRECT_URL_SENTINEL = "!url!";
 
   const uploadFile = async (file: ExternalBlob): Promise<Uint8Array> => {
+    // If the ExternalBlob has no raw bytes (created via fromURL), store the URL directly
+    // without uploading to blob storage. This is used for Google Drive embeds.
+    if (!file._blob) {
+      return new TextEncoder().encode(DIRECT_URL_SENTINEL + file.getDirectURL());
+    }
     const { hash } = await storageClient.putFile(
       await file.getBytes(),
       file.onProgress,
@@ -164,8 +171,14 @@ export async function createActorWithConfig(
   };
 
   const downloadFile = async (bytes: Uint8Array): Promise<ExternalBlob> => {
-    const hashWithPrefix = new TextDecoder().decode(new Uint8Array(bytes));
-    const hash = hashWithPrefix.substring(MOTOKO_DEDUPLICATION_SENTINEL.length);
+    const decoded = new TextDecoder().decode(new Uint8Array(bytes));
+    // Direct URL (e.g. Google Drive embed) — return as-is
+    if (decoded.startsWith(DIRECT_URL_SENTINEL)) {
+      const url = decoded.substring(DIRECT_URL_SENTINEL.length);
+      return ExternalBlob.fromURL(url);
+    }
+    // Regular blob storage reference
+    const hash = decoded.substring(MOTOKO_DEDUPLICATION_SENTINEL.length);
     const url = await storageClient.getDirectURL(hash);
     return ExternalBlob.fromURL(url);
   };
