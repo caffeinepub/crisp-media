@@ -66,6 +66,8 @@ export const idlService = IDL.Service({
     ),
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  'claimAdminAccess' : IDL.Func([], [], []),
+  'isAdminAssigned' : IDL.Func([], [IDL.Bool], ['query']),
   'addPortfolioItem' : IDL.Func(
       [IDL.Text, IDL.Text, ExternalBlob, IDL.Text, IDL.Text],
       [],
@@ -138,7 +140,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     '_caffeineStorageConfirmBlobDeletion' : IDL.Func(
-        [IDL.Vec(IDL.Vec(IDL.Nat8))],
+        [IDL.Vec(IDL.Nat8)],
         [],
         [],
       ),
@@ -154,6 +156,8 @@ export const idlFactory = ({ IDL }) => {
       ),
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    'claimAdminAccess' : IDL.Func([], [], []),
+    'isAdminAssigned' : IDL.Func([], [IDL.Bool], ['query']),
     'addPortfolioItem' : IDL.Func(
         [IDL.Text, IDL.Text, ExternalBlob, IDL.Text, IDL.Text],
         [],
