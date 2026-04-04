@@ -1,0 +1,183 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/PlusJakartaSans.woff2") format("woff2");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* Crisp Media dark royal blue palette */
+    --background: 0.18 0.07 264;
+    --foreground: 0.96 0.01 264;
+    --card: 0.22 0.06 264;
+    --card-foreground: 0.96 0.01 264;
+    --popover: 0.2 0.06 264;
+    --popover-foreground: 0.96 0.01 264;
+
+    /* Primary = accent gold */
+    --primary: 0.8 0.09 82;
+    --primary-foreground: 0.15 0.04 264;
+
+    --secondary: 0.24 0.05 264;
+    --secondary-foreground: 0.96 0.01 264;
+
+    --muted: 0.2 0.04 264;
+    --muted-foreground: 0.68 0.04 264;
+
+    --accent: 0.8 0.09 82;
+    --accent-foreground: 0.15 0.04 264;
+
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+
+    --border: 0.96 0.01 264 / 12%;
+    --input: 0.96 0.01 264 / 15%;
+    --ring: 0.8 0.09 82;
+
+    --chart-1: 0.646 0.222 41.116;
+    --chart-2: 0.6 0.118 184.704;
+    --chart-3: 0.398 0.07 227.392;
+    --chart-4: 0.828 0.189 84.429;
+    --chart-5: 0.769 0.188 70.08;
+
+    --sidebar: 0.16 0.06 264;
+    --sidebar-foreground: 0.96 0.01 264;
+    --sidebar-primary: 0.8 0.09 82;
+    --sidebar-primary-foreground: 0.15 0.04 264;
+    --sidebar-accent: 0.22 0.06 264;
+    --sidebar-accent-foreground: 0.96 0.01 264;
+    --sidebar-border: 0.96 0.01 264 / 12%;
+    --sidebar-ring: 0.8 0.09 82;
+
+    /* Custom tokens */
+    --gold: 0.8 0.09 82;
+    --gold-dim: 0.65 0.08 82;
+    --navy-deep: 0.12 0.08 264;
+    --navy-mid: 0.18 0.07 264;
+    --glass-bg: 0.96 0.01 264 / 5%;
+    --glass-border: 0.96 0.01 264 / 14%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+
+  body {
+    @apply text-foreground;
+    background: linear-gradient(135deg, #0b2a76 0%, #071432 50%, #050a1a 100%);
+    min-height: 100vh;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .text-gold {
+    color: oklch(var(--gold));
+  }
+  .bg-gold {
+    background-color: oklch(var(--gold));
+  }
+  .border-gold {
+    border-color: oklch(var(--gold));
+  }
+  .text-muted-crisp {
+    color: #a9b2c7;
+  }
+  .glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .glass-nav {
+    background: rgba(7, 20, 50, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .section-divider {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .hero-glow {
+    background: radial-gradient(
+      ellipse 60% 50% at 30% 20%,
+      rgba(11, 42, 118, 0.6) 0%,
+      transparent 70%
+    );
+  }
+  .card-hover {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+  .fade-in-up {
+    animation: fadeInUp 0.8s ease forwards;
+  }
+  .fade-in-up-delay-1 {
+    animation: fadeInUp 0.8s ease 0.2s both;
+  }
+  .fade-in-up-delay-2 {
+    animation: fadeInUp 0.8s ease 0.4s both;
+  }
+  .fade-in-up-delay-3 {
+    animation: fadeInUp 0.8s ease 0.6s both;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-up,
+  .fade-in-up-delay-1,
+  .fade-in-up-delay-2,
+  .fade-in-up-delay-3 {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}

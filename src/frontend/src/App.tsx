@@ -1,0 +1,1742 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Award,
+  ChevronDown,
+  Film,
+  Home,
+  Linkedin,
+  Loader2,
+  LogOut,
+  Menu,
+  Mic,
+  Plane,
+  Play,
+  Send,
+  Settings,
+  Smartphone,
+  Trash2,
+  Upload,
+  Users,
+  X,
+  Youtube,
+  Zap,
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { SiTiktok } from "react-icons/si";
+import { ExternalBlob, type PortfolioItem, UserRole } from "./backend";
+import { useActor } from "./hooks/useActor";
+import { useInternetIdentity } from "./hooks/useInternetIdentity";
+
+// ── Types ────────────────────────────────────────────────────────────────────
+interface NavLink {
+  label: string;
+  href: string;
+}
+
+interface ServiceCard {
+  icon: React.ReactNode;
+  title: string;
+  descriptor: string;
+}
+
+interface ValueProp {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+}
+
+interface SocialLink {
+  icon: React.ReactNode;
+  label: string;
+  href: string;
+}
+
+// ── Data ────────────────────────────────────────────────────────────────────
+const NAV_LINKS: NavLink[] = [
+  { label: "Home", href: "#home" },
+  { label: "Services", href: "#services" },
+  { label: "Portfolio", href: "#portfolio" },
+  { label: "Process", href: "#process" },
+  { label: "Contact", href: "#contact" },
+];
+
+const SERVICES: ServiceCard[] = [
+  {
+    icon: <Film className="w-6 h-6" />,
+    title: "Video Editing",
+    descriptor: "Cinematic Storytelling",
+  },
+  {
+    icon: <Home className="w-6 h-6" />,
+    title: "Homestead Documentaries",
+    descriptor: "Rural Narratives & Authentic Life Stories",
+  },
+  {
+    icon: <Mic className="w-6 h-6" />,
+    title: "Podcasts",
+    descriptor: "Professional Audio-Visual Production",
+  },
+  {
+    icon: <Plane className="w-6 h-6" />,
+    title: "Travel Vlogs",
+    descriptor: "Adventure Captured Beautifully",
+  },
+  {
+    icon: <Smartphone className="w-6 h-6" />,
+    title: "Short-Form Content",
+    descriptor: "Scroll-Stopping Shorts for Instagram & TikTok",
+  },
+];
+
+const CATEGORIES = [
+  "Video Editing",
+  "Homestead Documentary",
+  "Podcast",
+  "Travel Vlog",
+  "Short-Form Content",
+  "Lifestyle Vlog",
+];
+
+// ── React Query Hooks ────────────────────────────────────────────────────────
+
+function usePortfolioItems() {
+  const { actor, isFetching } = useActor();
+  return useQuery<PortfolioItem[]>({
+    queryKey: ["portfolioItems"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getPortfolioItems();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+function useIsCallerAdmin() {
+  const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  return useQuery<boolean>({
+    queryKey: ["isCallerAdmin"],
+    queryFn: async () => {
+      if (!actor) return false;
+      try {
+        return await actor.isCallerAdmin();
+      } catch {
+        return false;
+      }
+    },
+    enabled: !!actor && !isFetching && !!identity,
+  });
+}
+
+// ── Components ───────────────────────────────────────────────────────────────
+
+function Logo() {
+  return (
+    <div className="flex items-center">
+      <div
+        className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0"
+        style={{ border: "2px solid rgba(201,176,122,0.4)" }}
+      >
+        <img
+          src="/assets/crisp-media-logo.png"
+          alt="Crisp Media"
+          className="w-full h-full object-cover"
+        />
+      </div>
+    </div>
+  );
+}
+
+function scrollTo(id: string) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: "smooth" });
+}
+
+function Navbar() {
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
+  const { identity, login, clear, isLoggingIn } = useInternetIdentity();
+  const { data: isAdmin } = useIsCallerAdmin();
+  const isLoggedIn = !!identity;
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 24);
+      const sections = ["home", "services", "portfolio", "process", "contact"];
+      let current = "home";
+      for (const id of sections) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= 120) current = id;
+      }
+      setActiveSection(current);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleNavClick = (href: string) => {
+    setMobileOpen(false);
+    scrollTo(href.replace("#", ""));
+  };
+
+  return (
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled ? "glass-nav" : "bg-transparent"
+      }`}
+      style={{ height: "68px" }}
+    >
+      <div className="max-w-6xl mx-auto px-6 h-full flex items-center justify-between">
+        {/* Logo — navigates to home */}
+        <button
+          type="button"
+          onClick={() => handleNavClick("#home")}
+          data-ocid="nav.link"
+          className="focus-visible:outline-none"
+          aria-label="Go to home"
+        >
+          <Logo />
+        </button>
+
+        {/* Desktop Nav */}
+        <nav
+          className="hidden md:flex items-center gap-8"
+          aria-label="Main navigation"
+        >
+          {NAV_LINKS.map((link) => {
+            const isActive = activeSection === link.href.replace("#", "");
+            return (
+              <button
+                key={link.label}
+                type="button"
+                onClick={() => handleNavClick(link.href)}
+                className={`text-sm font-medium transition-colors duration-200 relative pb-1 ${
+                  isActive ? "text-white" : "text-muted-crisp hover:text-white"
+                }`}
+                data-ocid={`nav.${link.label.toLowerCase()}.link`}
+              >
+                {link.label}
+                {isActive && (
+                  <span
+                    className="absolute bottom-0 left-0 right-0 h-px"
+                    style={{ backgroundColor: "#C9B07A" }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Right side actions */}
+        <div className="hidden md:flex items-center gap-2">
+          {/* Admin button - subtle ghost style */}
+          {isLoggedIn ? (
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => scrollTo("admin-panel")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 hover:bg-white/10"
+                  style={{
+                    borderColor: "rgba(201,176,122,0.4)",
+                    color: "#C9B07A",
+                  }}
+                  data-ocid="nav.admin.button"
+                >
+                  <Settings className="w-3 h-3" />
+                  Manage
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={clear}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-white/15 text-white/50 hover:text-white hover:border-white/30 transition-all duration-200"
+                data-ocid="nav.logout.button"
+              >
+                <LogOut className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={login}
+              disabled={isLoggingIn}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-white/15 text-white/40 hover:text-white/70 hover:border-white/30 transition-all duration-200"
+              data-ocid="nav.admin.button"
+            >
+              {isLoggingIn ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Settings className="w-3 h-3" />
+              )}
+              Admin
+            </button>
+          )}
+
+          {/* CTA button desktop */}
+          <button
+            type="button"
+            onClick={() => handleNavClick("#contact")}
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:shadow-gold"
+            style={{ backgroundColor: "#C9B07A", color: "#071432" }}
+            data-ocid="nav.cta.button"
+          >
+            Work with Us
+          </button>
+        </div>
+
+        {/* Mobile menu button */}
+        <button
+          type="button"
+          onClick={() => setMobileOpen((v) => !v)}
+          className="md:hidden text-white p-2"
+          aria-label={mobileOpen ? "Close menu" : "Open menu"}
+          data-ocid="nav.menu.toggle"
+        >
+          {mobileOpen ? (
+            <X className="w-5 h-5" />
+          ) : (
+            <Menu className="w-5 h-5" />
+          )}
+        </button>
+      </div>
+
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden glass-nav px-6 py-4 flex flex-col gap-4"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            {NAV_LINKS.map((link) => (
+              <button
+                key={link.label}
+                type="button"
+                onClick={() => handleNavClick(link.href)}
+                className="text-left text-base font-medium text-muted-crisp hover:text-white transition-colors"
+                data-ocid={`nav.mobile.${link.label.toLowerCase()}.link`}
+              >
+                {link.label}
+              </button>
+            ))}
+            <div className="flex gap-3 mt-2">
+              <button
+                type="button"
+                onClick={() => handleNavClick("#contact")}
+                className="flex-1 self-start px-5 py-2.5 rounded-full text-sm font-semibold"
+                style={{ backgroundColor: "#C9B07A", color: "#071432" }}
+                data-ocid="nav.mobile.cta.button"
+              >
+                Work with Us
+              </button>
+              {!isLoggedIn && (
+                <button
+                  type="button"
+                  onClick={login}
+                  disabled={isLoggingIn}
+                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-full text-xs font-medium border border-white/15 text-white/50 hover:text-white transition-all"
+                  data-ocid="nav.mobile.admin.button"
+                >
+                  {isLoggingIn ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Settings className="w-3 h-3" />
+                  )}
+                  Admin
+                </button>
+              )}
+              {isLoggedIn && (
+                <button
+                  type="button"
+                  onClick={clear}
+                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-full text-xs font-medium border border-white/15 text-white/50 hover:text-white transition-all"
+                  data-ocid="nav.mobile.logout.button"
+                >
+                  <LogOut className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </header>
+  );
+}
+
+function HeroSection() {
+  return (
+    <section
+      id="home"
+      className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 overflow-hidden"
+      style={{ paddingTop: "68px" }}
+    >
+      {/* Background glow */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 55% at 25% 15%, rgba(11, 42, 118, 0.7) 0%, transparent 65%)," +
+            "radial-gradient(ellipse 40% 30% at 75% 80%, rgba(5, 10, 26, 0.8) 0%, transparent 60%)",
+        }}
+      />
+
+      <div className="relative z-10 max-w-4xl mx-auto">
+        {/* Kicker */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="inline-flex items-center gap-3 mb-8"
+        >
+          <span className="h-px w-10" style={{ backgroundColor: "#C9B07A" }} />
+          <span
+            className="text-xs font-semibold uppercase tracking-[0.3em]"
+            style={{ color: "#C9B07A" }}
+          >
+            EST. 2020
+          </span>
+          <span className="h-px w-10" style={{ backgroundColor: "#C9B07A" }} />
+        </motion.div>
+
+        {/* Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.15 }}
+          className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight text-white mb-6"
+          style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
+        >
+          Turning Your Raw Visions Into{" "}
+          <span style={{ color: "#C9B07A" }}>Scroll Stopping</span> Reality.
+        </motion.h1>
+
+        {/* Subtext */}
+        <motion.p
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.3 }}
+          className="text-base md:text-lg leading-relaxed mb-10 max-w-2xl mx-auto"
+          style={{ color: "#A9B2C7" }}
+        >
+          We are a premium video editing agency crafting cinematic stories since
+          2020. From homestead documentaries to viral short-form content — we
+          transform your raw footage into content that captivates.
+        </motion.p>
+
+        {/* CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.45 }}
+          className="flex flex-col sm:flex-row gap-4 items-center justify-center"
+        >
+          <button
+            type="button"
+            onClick={() => scrollTo("contact")}
+            className="flex items-center gap-2.5 px-8 py-3.5 rounded-full text-sm font-bold transition-all duration-200 hover:shadow-gold hover:scale-105 active:scale-95"
+            style={{ backgroundColor: "#C9B07A", color: "#071432" }}
+            data-ocid="hero.cta.button"
+          >
+            <Play className="w-4 h-4 fill-current" />
+            Work with Us
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollTo("portfolio")}
+            className="flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-medium border border-white/20 text-white hover:border-white/40 hover:bg-white/5 transition-all duration-200"
+            data-ocid="hero.portfolio.button"
+          >
+            View Our Work
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </motion.div>
+      </div>
+
+      {/* Scroll indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2, duration: 0.8 }}
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+      >
+        <span
+          className="text-xs uppercase tracking-widest"
+          style={{ color: "#A9B2C7" }}
+        >
+          Scroll
+        </span>
+        <motion.div
+          animate={{ y: [0, 8, 0] }}
+          transition={{
+            repeat: Number.POSITIVE_INFINITY,
+            duration: 1.8,
+            ease: "easeInOut",
+          }}
+        >
+          <ChevronDown className="w-4 h-4" style={{ color: "#A9B2C7" }} />
+        </motion.div>
+      </motion.div>
+    </section>
+  );
+}
+
+function ServicesSection() {
+  return (
+    <section id="services" className="relative py-24 px-6 section-divider">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-16">
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.3em] mb-3"
+            style={{ color: "#C9B07A" }}
+          >
+            What We Do
+          </p>
+          <h2
+            className="text-3xl md:text-4xl font-bold text-white"
+            style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
+          >
+            Services
+          </h2>
+          <p
+            className="mt-4 text-base max-w-xl mx-auto"
+            style={{ color: "#A9B2C7" }}
+          >
+            Specialised editing for creators, brands, and storytellers who
+            refuse to blend in.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5">
+          {SERVICES.map((service, i) => (
+            <motion.div
+              key={service.title}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.08 }}
+              className="glass-card rounded-2xl p-6 card-hover flex flex-col gap-4"
+              data-ocid={`services.item.${i + 1}`}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{
+                  backgroundColor: "rgba(201,176,122,0.12)",
+                  color: "#C9B07A",
+                }}
+              >
+                {service.icon}
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white mb-1.5">
+                  {service.title}
+                </h3>
+                <p
+                  className="text-xs leading-relaxed"
+                  style={{ color: "#A9B2C7" }}
+                >
+                  {service.descriptor}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ProcessSection() {
+  const values: ValueProp[] = [
+    {
+      icon: <Zap className="w-5 h-5" />,
+      title: "Fast Turnaround",
+      desc: "48–72 hour delivery on most projects. We respect your deadlines without sacrificing quality.",
+    },
+    {
+      icon: <Award className="w-5 h-5" />,
+      title: "Premium Quality",
+      desc: "Cinematic color grades, precise cuts, and attention to every frame. Your audience will notice the difference.",
+    },
+    {
+      icon: <Users className="w-5 h-5" />,
+      title: "Tailored Approach",
+      desc: "We learn your brand voice and visual style — every project is treated as a unique creative partnership.",
+    },
+  ];
+
+  return (
+    <section id="process" className="relative py-24 px-6 section-divider">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-16">
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.3em] mb-3"
+            style={{ color: "#C9B07A" }}
+          >
+            Our Story
+          </p>
+          <h2
+            className="text-3xl md:text-4xl font-bold text-white mb-6"
+            style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
+          >
+            Why Crisp Media
+          </h2>
+          <p
+            className="text-base max-w-2xl mx-auto"
+            style={{ color: "#A9B2C7" }}
+          >
+            Founded in 2020, Crisp Media was born from a passion for authentic
+            storytelling. We started editing homestead documentaries and travel
+            vlogs, then expanded into podcasts and viral short-form content.
+            Every edit we deliver is crafted with intentionality — because your
+            audience deserves more than average.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {values.map((v, i) => (
+            <motion.div
+              key={v.title}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.12 }}
+              className="glass-card rounded-2xl p-7 card-hover"
+              data-ocid={`process.item.${i + 1}`}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
+                style={{
+                  backgroundColor: "rgba(201,176,122,0.12)",
+                  color: "#C9B07A",
+                }}
+              >
+                {v.icon}
+              </div>
+              <h3 className="text-base font-semibold text-white mb-2">
+                {v.title}
+              </h3>
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: "#A9B2C7" }}
+              >
+                {v.desc}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PortfolioItemSkeleton() {
+  return (
+    <div className="glass-card rounded-2xl overflow-hidden animate-pulse">
+      <div className="w-full bg-white/10" style={{ aspectRatio: "16/10" }} />
+      <div className="p-5">
+        <div className="h-3 bg-white/10 rounded w-1/3 mb-2" />
+        <div className="h-4 bg-white/10 rounded w-2/3" />
+      </div>
+    </div>
+  );
+}
+
+function PortfolioSection() {
+  const { data: portfolioItems, isLoading } = usePortfolioItems();
+
+  return (
+    <section id="portfolio" className="relative py-24 px-6 section-divider">
+      <div className="max-w-6xl mx-auto">
+        {/* Hero collage */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+          className="relative rounded-3xl overflow-hidden mb-16"
+          style={{ height: "320px" }}
+        >
+          <img
+            src="/assets/generated/crisp-media-hero.dim_1200x600.jpg"
+            alt="Crisp Media Portfolio Showcase"
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(7,20,50,0.65) 0%, rgba(5,10,26,0.5) 100%)",
+            }}
+          >
+            <p
+              className="text-xs font-semibold uppercase tracking-[0.35em] mb-3"
+              style={{ color: "#C9B07A" }}
+            >
+              Crisp Media
+            </p>
+            <h2
+              className="text-4xl md:text-5xl font-bold text-white text-center leading-tight"
+              style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
+            >
+              Crafted with Passion
+            </h2>
+          </div>
+        </motion.div>
+
+        <div className="text-center mb-12">
+          <h2
+            className="text-3xl md:text-4xl font-bold text-white"
+            style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
+          >
+            Portfolio
+          </h2>
+          <p className="mt-3 text-sm" style={{ color: "#A9B2C7" }}>
+            A selection of recent projects across all formats.
+          </p>
+        </div>
+
+        {/* Loading state */}
+        {isLoading && (
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            data-ocid="portfolio.loading_state"
+          >
+            {[1, 2, 3].map((n) => (
+              <PortfolioItemSkeleton key={n} />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && (!portfolioItems || portfolioItems.length === 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="glass-card rounded-2xl p-16 text-center"
+            data-ocid="portfolio.empty_state"
+          >
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
+              style={{ backgroundColor: "rgba(201,176,122,0.10)" }}
+            >
+              <Film className="w-7 h-7" style={{ color: "#C9B07A" }} />
+            </div>
+            <h3
+              className="text-xl font-semibold text-white mb-2"
+              style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
+            >
+              Portfolio Coming Soon
+            </h3>
+            <p
+              className="text-sm max-w-sm mx-auto"
+              style={{ color: "#A9B2C7" }}
+            >
+              Check back for our latest work — real projects, real stories,
+              crafted with care.
+            </p>
+          </motion.div>
+        )}
+
+        {/* Real portfolio items */}
+        {!isLoading && portfolioItems && portfolioItems.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {portfolioItems.map((item, i) => (
+              <motion.div
+                key={`${item.title}-${i}`}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.07 }}
+                className="glass-card rounded-2xl overflow-hidden card-hover group"
+                data-ocid={`portfolio.item.${i + 1}`}
+              >
+                <div
+                  className="relative overflow-hidden"
+                  style={{ aspectRatio: "16/10" }}
+                >
+                  {item.mediaType === "video" ? (
+                    <video
+                      src={item.media.getDirectURL()}
+                      controls
+                      className="w-full h-full object-cover"
+                      preload="metadata"
+                    >
+                      <track kind="captions" />
+                    </video>
+                  ) : (
+                    <img
+                      src={item.media.getDirectURL()}
+                      alt={item.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  )}
+                  {item.mediaType !== "video" && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  )}
+                </div>
+                <div className="p-5">
+                  <span
+                    className="text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: "#C9B07A" }}
+                  >
+                    {item.category}
+                  </span>
+                  <h3 className="mt-1 text-sm font-semibold text-white">
+                    {item.title}
+                  </h3>
+                  {item.description && (
+                    <p
+                      className="mt-1 text-xs leading-relaxed line-clamp-2"
+                      style={{ color: "#A9B2C7" }}
+                    >
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ContactSection() {
+  const [formState, setFormState] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
+  };
+
+  return (
+    <section id="contact" className="relative py-24 px-6 section-divider">
+      <div className="max-w-2xl mx-auto text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.3em] mb-3"
+            style={{ color: "#C9B07A" }}
+          >
+            Let&apos;s Connect
+          </p>
+          <h2
+            className="text-4xl md:text-5xl font-bold text-white mb-4"
+            style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
+          >
+            Ready to Create?
+          </h2>
+          <p className="text-base mb-12" style={{ color: "#A9B2C7" }}>
+            Tell us about your project — whether it&apos;s a documentary, a
+            podcast, a travel series, or viral short-form content. We&apos;d
+            love to work together.
+          </p>
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          {submitted ? (
+            <motion.div
+              key="success"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="glass-card rounded-2xl p-12 text-center"
+              data-ocid="contact.success_state"
+            >
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
+                style={{ backgroundColor: "rgba(201,176,122,0.15)" }}
+              >
+                <Send className="w-6 h-6" style={{ color: "#C9B07A" }} />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">
+                Message Sent!
+              </h3>
+              <p className="text-sm" style={{ color: "#A9B2C7" }}>
+                Thank you for reaching out. We&apos;ll get back to you within 24
+                hours.
+              </p>
+            </motion.div>
+          ) : (
+            <motion.form
+              key="form"
+              onSubmit={handleSubmit}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card rounded-2xl p-8 flex flex-col gap-5 text-left"
+              data-ocid="contact.dialog"
+            >
+              <div>
+                <label
+                  htmlFor="contact-name"
+                  className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                >
+                  Your Name
+                </label>
+                <Input
+                  id="contact-name"
+                  required
+                  placeholder="e.g. Jamie Rivera"
+                  value={formState.name}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus:border-gold focus-visible:ring-0 focus-visible:ring-offset-0"
+                  data-ocid="contact.name.input"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="contact-email"
+                  className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                >
+                  Email Address
+                </label>
+                <Input
+                  id="contact-email"
+                  required
+                  type="email"
+                  placeholder="you@example.com"
+                  value={formState.email}
+                  onChange={(e) =>
+                    setFormState((prev) => ({ ...prev, email: e.target.value }))
+                  }
+                  className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus:border-gold focus-visible:ring-0 focus-visible:ring-offset-0"
+                  data-ocid="contact.email.input"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="contact-message"
+                  className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                >
+                  Tell Us About Your Project
+                </label>
+                <Textarea
+                  id="contact-message"
+                  required
+                  rows={5}
+                  placeholder="Describe your project, content type, and goals..."
+                  value={formState.message}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      message: e.target.value,
+                    }))
+                  }
+                  className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus:border-gold focus-visible:ring-0 focus-visible:ring-offset-0 resize-none"
+                  data-ocid="contact.message.textarea"
+                />
+              </div>
+              <button
+                type="submit"
+                className="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-full text-sm font-bold transition-all duration-200 hover:shadow-gold hover:scale-[1.02] active:scale-95"
+                style={{ backgroundColor: "#C9B07A", color: "#071432" }}
+                data-ocid="contact.submit.button"
+              >
+                <Send className="w-4 h-4" />
+                Send Message
+              </button>
+            </motion.form>
+          )}
+        </AnimatePresence>
+      </div>
+    </section>
+  );
+}
+
+// ── Admin Panel ──────────────────────────────────────────────────────────────
+
+function AdminPanel() {
+  const { actor, isFetching } = useActor();
+  const { identity, clear } = useInternetIdentity();
+  const queryClient = useQueryClient();
+  const { data: isAdmin, isLoading: adminLoading } = useIsCallerAdmin();
+
+  // Upload form state
+  const [dragOver, setDragOver] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [uploadCategory, setUploadCategory] = useState("");
+  const [uploadDescription, setUploadDescription] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: portfolioItems, isLoading: itemsLoading } = usePortfolioItems();
+
+  // Admin token state
+  const [adminToken, setAdminToken] = useState("");
+
+  // Claim admin access mutation using secret token
+  const claimAdminMutation = useMutation({
+    mutationFn: async (token: string) => {
+      if (!actor || !identity) throw new Error("Not connected");
+      await actor._initializeAccessControlWithSecret(token);
+    },
+    onSuccess: () => {
+      setAdminToken("");
+      queryClient.invalidateQueries({ queryKey: ["isCallerAdmin"] });
+      queryClient.invalidateQueries({ queryKey: ["actor"] });
+    },
+  });
+
+  // Delete portfolio item mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (index: number) => {
+      if (!actor) throw new Error("No actor");
+      await actor.deletePortfolioItem(BigInt(index));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portfolioItems"] });
+    },
+  });
+
+  const handleFileChange = useCallback((file: File | null) => {
+    setSelectedFile(file);
+    setUploadError("");
+    setUploadSuccess(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLElement>) => {
+      e.preventDefault();
+      setDragOver(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleFileChange(file);
+    },
+    [handleFileChange],
+  );
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!actor || !selectedFile || !uploadTitle || !uploadCategory) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadError("");
+    setUploadSuccess(false);
+
+    try {
+      const bytes = new Uint8Array(await selectedFile.arrayBuffer());
+      let uploadBlob = ExternalBlob.fromBytes(bytes);
+      uploadBlob = uploadBlob.withUploadProgress((pct) => {
+        setUploadProgress(pct);
+      });
+
+      const mediaType = selectedFile.type.startsWith("video/")
+        ? "video"
+        : "image";
+
+      await actor.addPortfolioItem(
+        uploadTitle,
+        uploadCategory,
+        uploadBlob,
+        mediaType,
+        uploadDescription,
+      );
+
+      queryClient.invalidateQueries({ queryKey: ["portfolioItems"] });
+      setUploadSuccess(true);
+      setSelectedFile(null);
+      setUploadTitle("");
+      setUploadCategory("");
+      setUploadDescription("");
+      setUploadProgress(0);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err) {
+      setUploadError(
+        err instanceof Error ? err.message : "Upload failed. Please try again.",
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  if (!identity) return null;
+
+  return (
+    <section
+      id="admin-panel"
+      className="relative py-16 px-6 section-divider"
+      data-ocid="admin.panel"
+    >
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: "rgba(201,176,122,0.15)" }}
+            >
+              <Settings className="w-4 h-4" style={{ color: "#C9B07A" }} />
+            </div>
+            <div>
+              <h2
+                className="text-xl font-bold text-white"
+                style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
+              >
+                Admin Panel
+              </h2>
+              <p className="text-xs" style={{ color: "#A9B2C7" }}>
+                Manage your portfolio content
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={clear}
+            className="flex items-center gap-2 border-white/15 text-white/60 hover:text-white hover:border-white/30 bg-transparent"
+            data-ocid="admin.logout.button"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Log Out
+          </Button>
+        </div>
+
+        {/* Claim admin access */}
+        {(adminLoading || isFetching) && (
+          <div
+            className="glass-card rounded-2xl p-8 text-center mb-8"
+            style={{ border: "1px solid rgba(201,176,122,0.25)" }}
+            data-ocid="admin.loading_state"
+          >
+            <Loader2
+              className="w-6 h-6 animate-spin mx-auto mb-3"
+              style={{ color: "#C9B07A" }}
+            />
+            <p className="text-sm" style={{ color: "#A9B2C7" }}>
+              Checking permissions...
+            </p>
+          </div>
+        )}
+
+        {!adminLoading && !isFetching && isAdmin === false && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card rounded-2xl p-10 mb-8"
+            style={{ border: "1px solid rgba(201,176,122,0.3)" }}
+            data-ocid="admin.claim.panel"
+          >
+            <div
+              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
+              style={{ backgroundColor: "rgba(201,176,122,0.12)" }}
+            >
+              <Settings className="w-5 h-5" style={{ color: "#C9B07A" }} />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">
+              Activate Admin Access
+            </h3>
+            <p className="text-sm mb-6 max-w-sm" style={{ color: "#A9B2C7" }}>
+              Enter your Caffeine admin token to activate admin access. Find it
+              in your Caffeine project dashboard.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 max-w-md">
+              <input
+                type="password"
+                placeholder="Paste your admin token here..."
+                value={adminToken}
+                onChange={(e) => setAdminToken(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && adminToken.trim()) {
+                    claimAdminMutation.mutate(adminToken.trim());
+                  }
+                }}
+                className="flex-1 rounded-lg px-4 py-2 text-sm outline-none"
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(201,176,122,0.3)",
+                  color: "#fff",
+                }}
+                data-ocid="admin.token.input"
+              />
+              <Button
+                onClick={() => claimAdminMutation.mutate(adminToken.trim())}
+                disabled={claimAdminMutation.isPending || !adminToken.trim()}
+                className="font-semibold px-6 shrink-0"
+                style={{ backgroundColor: "#C9B07A", color: "#071432" }}
+                data-ocid="admin.claim.button"
+              >
+                {claimAdminMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Activating...
+                  </>
+                ) : (
+                  "Activate"
+                )}
+              </Button>
+            </div>
+            {claimAdminMutation.isError && (
+              <p
+                className="mt-3 text-xs"
+                style={{ color: "#ef4444" }}
+                data-ocid="admin.claim.error_state"
+              >
+                Invalid token. Please check your Caffeine project settings.
+              </p>
+            )}
+          </motion.div>
+        )}
+
+        {/* Admin content - only if admin */}
+        {!adminLoading && !isFetching && isAdmin === true && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Upload Form */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="glass-card rounded-2xl p-7"
+              style={{ border: "1px solid rgba(201,176,122,0.2)" }}
+              data-ocid="admin.upload.panel"
+            >
+              <h3 className="text-base font-semibold text-white mb-6 flex items-center gap-2">
+                <Upload className="w-4 h-4" style={{ color: "#C9B07A" }} />
+                Upload New Media
+              </h3>
+
+              <form onSubmit={handleUpload} className="flex flex-col gap-5">
+                {/* Drag & Drop Zone */}
+                <label
+                  htmlFor="file-upload-input"
+                  className={`relative rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer block ${
+                    dragOver
+                      ? "border-[#C9B07A] bg-[rgba(201,176,122,0.08)]"
+                      : "border-white/20 hover:border-white/40 hover:bg-white/5"
+                  }`}
+                  style={{ minHeight: "120px" }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  data-ocid="admin.dropzone"
+                >
+                  <input
+                    ref={fileInputRef}
+                    id="file-upload-input"
+                    type="file"
+                    accept="video/*,image/*"
+                    className="sr-only"
+                    onChange={(e) =>
+                      handleFileChange(e.target.files?.[0] ?? null)
+                    }
+                    data-ocid="admin.upload_button"
+                  />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4">
+                    {selectedFile ? (
+                      <>
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: "rgba(201,176,122,0.15)" }}
+                        >
+                          {selectedFile.type.startsWith("video/") ? (
+                            <Film
+                              className="w-4 h-4"
+                              style={{ color: "#C9B07A" }}
+                            />
+                          ) : (
+                            <Upload
+                              className="w-4 h-4"
+                              style={{ color: "#C9B07A" }}
+                            />
+                          )}
+                        </div>
+                        <p className="text-sm font-medium text-white text-center truncate max-w-full">
+                          {selectedFile.name}
+                        </p>
+                        <p className="text-xs" style={{ color: "#A9B2C7" }}>
+                          {(selectedFile.size / 1024 / 1024).toFixed(1)} MB
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload
+                          className="w-6 h-6 mb-1"
+                          style={{ color: "#A9B2C7" }}
+                        />
+                        <p
+                          className="text-sm text-center"
+                          style={{ color: "#A9B2C7" }}
+                        >
+                          Drag & drop or{" "}
+                          <span style={{ color: "#C9B07A" }}>browse</span>
+                        </p>
+                        <p
+                          className="text-xs"
+                          style={{ color: "#A9B2C7", opacity: 0.6 }}
+                        >
+                          Videos & images — no size limit
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </label>
+
+                {/* Title */}
+                <div>
+                  <label
+                    htmlFor="upload-title"
+                    className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                  >
+                    Title *
+                  </label>
+                  <Input
+                    id="upload-title"
+                    required
+                    placeholder="e.g. Southeast Asia Road Trip"
+                    value={uploadTitle}
+                    onChange={(e) => setUploadTitle(e.target.value)}
+                    className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    data-ocid="admin.title.input"
+                  />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label
+                    htmlFor="upload-category"
+                    className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                  >
+                    Category *
+                  </label>
+                  <Select
+                    value={uploadCategory}
+                    onValueChange={setUploadCategory}
+                    required
+                  >
+                    <SelectTrigger
+                      className="bg-white/5 border-white/15 text-white focus:ring-0"
+                      data-ocid="admin.category.select"
+                    >
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#071432] border-white/15">
+                      {CATEGORIES.map((cat) => (
+                        <SelectItem
+                          key={cat}
+                          value={cat}
+                          className="text-white focus:bg-white/10 focus:text-white"
+                        >
+                          {cat}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label
+                    htmlFor="upload-desc"
+                    className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                  >
+                    Description{" "}
+                    <span style={{ color: "#A9B2C7" }}>(optional)</span>
+                  </label>
+                  <Textarea
+                    id="upload-desc"
+                    rows={3}
+                    placeholder="Brief description of this project..."
+                    value={uploadDescription}
+                    onChange={(e) => setUploadDescription(e.target.value)}
+                    className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none"
+                    data-ocid="admin.description.textarea"
+                  />
+                </div>
+
+                {/* Upload progress */}
+                {isUploading && (
+                  <div data-ocid="admin.upload.loading_state">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs" style={{ color: "#A9B2C7" }}>
+                        Uploading...
+                      </span>
+                      <span
+                        className="text-xs font-semibold"
+                        style={{ color: "#C9B07A" }}
+                      >
+                        {Math.round(uploadProgress)}%
+                      </span>
+                    </div>
+                    <Progress
+                      value={uploadProgress}
+                      className="h-1.5 bg-white/10"
+                    />
+                  </div>
+                )}
+
+                {/* Error */}
+                {uploadError && (
+                  <p
+                    className="text-xs p-3 rounded-lg"
+                    style={{
+                      color: "#ef4444",
+                      backgroundColor: "rgba(239,68,68,0.1)",
+                    }}
+                    data-ocid="admin.upload.error_state"
+                  >
+                    {uploadError}
+                  </p>
+                )}
+
+                {/* Success */}
+                {uploadSuccess && (
+                  <p
+                    className="text-xs p-3 rounded-lg"
+                    style={{
+                      color: "#4ade80",
+                      backgroundColor: "rgba(74,222,128,0.1)",
+                    }}
+                    data-ocid="admin.upload.success_state"
+                  >
+                    ✓ Media uploaded successfully!
+                  </p>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={
+                    isUploading ||
+                    !selectedFile ||
+                    !uploadTitle ||
+                    !uploadCategory
+                  }
+                  className="w-full font-semibold py-5"
+                  style={{
+                    backgroundColor:
+                      isUploading ||
+                      !selectedFile ||
+                      !uploadTitle ||
+                      !uploadCategory
+                        ? undefined
+                        : "#C9B07A",
+                    color:
+                      isUploading ||
+                      !selectedFile ||
+                      !uploadTitle ||
+                      !uploadCategory
+                        ? undefined
+                        : "#071432",
+                  }}
+                  data-ocid="admin.upload.submit_button"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload to Portfolio
+                    </>
+                  )}
+                </Button>
+              </form>
+            </motion.div>
+
+            {/* Portfolio Items List */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.08 }}
+              className="glass-card rounded-2xl p-7"
+              style={{ border: "1px solid rgba(201,176,122,0.2)" }}
+              data-ocid="admin.items.panel"
+            >
+              <h3 className="text-base font-semibold text-white mb-6 flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Film className="w-4 h-4" style={{ color: "#C9B07A" }} />
+                  Portfolio Items
+                </span>
+                {portfolioItems && portfolioItems.length > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="text-xs"
+                    style={{
+                      backgroundColor: "rgba(201,176,122,0.15)",
+                      color: "#C9B07A",
+                    }}
+                  >
+                    {portfolioItems.length}
+                  </Badge>
+                )}
+              </h3>
+
+              {itemsLoading && (
+                <div
+                  className="flex items-center justify-center py-12"
+                  data-ocid="admin.items.loading_state"
+                >
+                  <Loader2
+                    className="w-5 h-5 animate-spin"
+                    style={{ color: "#C9B07A" }}
+                  />
+                </div>
+              )}
+
+              {!itemsLoading &&
+                (!portfolioItems || portfolioItems.length === 0) && (
+                  <div
+                    className="text-center py-12"
+                    data-ocid="admin.items.empty_state"
+                  >
+                    <Film
+                      className="w-8 h-8 mx-auto mb-3 opacity-30"
+                      style={{ color: "#A9B2C7" }}
+                    />
+                    <p className="text-sm" style={{ color: "#A9B2C7" }}>
+                      No items yet. Upload your first piece of work!
+                    </p>
+                  </div>
+                )}
+
+              {!itemsLoading && portfolioItems && portfolioItems.length > 0 && (
+                <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-1">
+                  {portfolioItems.map((item, i) => (
+                    <div
+                      key={`${item.title}-${item.category}-${i}`}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10"
+                      data-ocid={`admin.items.item.${i + 1}`}
+                    >
+                      {/* Thumbnail */}
+                      <div className="w-16 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-white/10">
+                        {item.mediaType === "video" ? (
+                          <div
+                            className="w-full h-full flex items-center justify-center"
+                            style={{
+                              backgroundColor: "rgba(201,176,122,0.1)",
+                            }}
+                          >
+                            <Film
+                              className="w-4 h-4"
+                              style={{ color: "#C9B07A" }}
+                            />
+                          </div>
+                        ) : (
+                          <img
+                            src={item.media.getDirectURL()}
+                            alt={item.title}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">
+                          {item.title}
+                        </p>
+                        <p
+                          className="text-xs truncate"
+                          style={{ color: "#A9B2C7" }}
+                        >
+                          {item.category}
+                        </p>
+                      </div>
+
+                      {/* Delete */}
+                      <button
+                        type="button"
+                        onClick={() => deleteMutation.mutate(i)}
+                        disabled={deleteMutation.isPending}
+                        className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
+                        aria-label={`Delete ${item.title}`}
+                        data-ocid={`admin.items.delete_button.${i + 1}`}
+                      >
+                        {deleteMutation.isPending ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  const currentYear = new Date().getFullYear();
+  const hostname =
+    typeof window !== "undefined" ? window.location.hostname : "";
+
+  const socialLinks: SocialLink[] = [
+    { icon: <Youtube className="w-4 h-4" />, label: "YouTube", href: "#" },
+    { icon: <SiTiktok className="w-4 h-4" />, label: "TikTok", href: "#" },
+    { icon: <Linkedin className="w-4 h-4" />, label: "LinkedIn", href: "#" },
+  ];
+
+  return (
+    <footer className="relative pt-16 pb-8 px-6 section-divider">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
+          {/* Brand */}
+          <div>
+            <Logo />
+            <p className="mt-4 text-xs" style={{ color: "#A9B2C7" }}>
+              Founded 2020
+            </p>
+            <p
+              className="mt-3 text-sm leading-relaxed"
+              style={{ color: "#A9B2C7" }}
+            >
+              Premium video editing for creators and brands who demand cinematic
+              quality.
+            </p>
+          </div>
+
+          {/* Quick links */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white mb-5">
+              Quick Links
+            </p>
+            <ul className="flex flex-col gap-3">
+              {NAV_LINKS.map((link) => (
+                <li key={link.label}>
+                  <button
+                    type="button"
+                    onClick={() => scrollTo(link.href.replace("#", ""))}
+                    className="text-sm transition-colors duration-200 hover:text-white"
+                    style={{ color: "#A9B2C7" }}
+                    data-ocid={`footer.${link.label.toLowerCase()}.link`}
+                  >
+                    {link.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Social */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white mb-5">
+              Follow Us
+            </p>
+            <div className="flex gap-3">
+              {socialLinks.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  aria-label={s.label}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center glass-card transition-all duration-200 hover:border-white/30 hover:bg-white/10"
+                  style={{ color: "#A9B2C7" }}
+                  data-ocid={`footer.${s.label.toLowerCase()}.link`}
+                >
+                  {s.icon}
+                </a>
+              ))}
+            </div>
+            <p
+              className="mt-6 text-sm leading-relaxed"
+              style={{ color: "#A9B2C7" }}
+            >
+              Ready to elevate your content?
+              <br />
+              <button
+                type="button"
+                onClick={() => scrollTo("contact")}
+                className="font-medium transition-colors hover:text-white"
+                style={{ color: "#C9B07A" }}
+                data-ocid="footer.contact.button"
+              >
+                Let&apos;s talk &rarr;
+              </button>
+            </p>
+          </div>
+        </div>
+
+        {/* Divider + copyright */}
+        <div
+          className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs"
+          style={{
+            borderTop: "1px solid rgba(255,255,255,0.08)",
+            color: "#A9B2C7",
+          }}
+        >
+          <p>&copy; {currentYear} Crisp Media. All rights reserved.</p>
+          <p>
+            Built with <span style={{ color: "#C9B07A" }}>&#9829;</span> using{" "}
+            <a
+              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(hostname)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              caffeine.ai
+            </a>
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+// ── App ──────────────────────────────────────────────────────────────────────
+export default function App() {
+  const { identity } = useInternetIdentity();
+
+  return (
+    <div
+      className="min-h-screen"
+      style={{
+        background:
+          "linear-gradient(135deg, #0B2A76 0%, #071432 50%, #050A1A 100%)",
+      }}
+    >
+      <Navbar />
+      <main>
+        <HeroSection />
+        <ServicesSection />
+        <ProcessSection />
+        <PortfolioSection />
+        <ContactSection />
+        {identity && <AdminPanel />}
+      </main>
+      <Footer />
+    </div>
+  );
+}
