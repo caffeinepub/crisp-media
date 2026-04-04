@@ -110,6 +110,24 @@ const CATEGORIES = [
   "Lifestyle Vlog",
 ];
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function convertDriveLink(url: string): string {
+  const fileIdMatch =
+    url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+    url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (!fileIdMatch)
+    throw new Error(
+      "Invalid Google Drive link. Please use a shareable file link.",
+    );
+  return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+}
+
+const SHORT_FORM_CATEGORIES = ["Short-Form Content"];
+function getAspectRatio(category: string): string {
+  return SHORT_FORM_CATEGORIES.includes(category) ? "9/16" : "16/9";
+}
+
 // ── React Query Hooks ────────────────────────────────────────────────────────
 
 function usePortfolioItems() {
@@ -772,7 +790,7 @@ function PortfolioSection() {
               >
                 <div
                   className="relative overflow-hidden"
-                  style={{ aspectRatio: "16/10" }}
+                  style={{ aspectRatio: getAspectRatio(item.category) }}
                 >
                   {item.mediaType === "video" ? (
                     <video
@@ -783,6 +801,16 @@ function PortfolioSection() {
                     >
                       <track kind="captions" />
                     </video>
+                  ) : item.mediaType === "drive-video" ? (
+                    <iframe
+                      src={item.media.getDirectURL()}
+                      className="w-full h-full"
+                      allow="autoplay; encrypted-media; fullscreen"
+                      allowFullScreen
+                      title={item.title}
+                      referrerPolicy="no-referrer-when-downgrade"
+                      style={{ border: "none" }}
+                    />
                   ) : (
                     <img
                       src={item.media.getDirectURL()}
@@ -791,9 +819,10 @@ function PortfolioSection() {
                       loading="lazy"
                     />
                   )}
-                  {item.mediaType !== "video" && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  )}
+                  {item.mediaType !== "video" &&
+                    item.mediaType !== "drive-video" && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    )}
                 </div>
                 <div className="p-5">
                   <span
@@ -994,6 +1023,11 @@ function AdminPanel() {
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadMode, setUploadMode] = useState<"file" | "drive">("file");
+  const [driveLink, setDriveLink] = useState("");
+  const [driveLinkError, setDriveLinkError] = useState("");
+  const [driveLinkSuccess, setDriveLinkSuccess] = useState(false);
+  const [isDriveSubmitting, setIsDriveSubmitting] = useState(false);
 
   const { data: portfolioItems, isLoading: itemsLoading } = usePortfolioItems();
 
@@ -1079,6 +1113,37 @@ function AdminPanel() {
       );
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleDriveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!actor || !driveLink || !uploadTitle || !uploadCategory) return;
+    setDriveLinkError("");
+    setDriveLinkSuccess(false);
+    setIsDriveSubmitting(true);
+    try {
+      const embedUrl = convertDriveLink(driveLink);
+      const blob = ExternalBlob.fromURL(embedUrl);
+      await actor.addPortfolioItem(
+        uploadTitle,
+        uploadCategory,
+        blob,
+        "drive-video",
+        uploadDescription,
+      );
+      queryClient.invalidateQueries({ queryKey: ["portfolioItems"] });
+      setDriveLinkSuccess(true);
+      setDriveLink("");
+      setUploadTitle("");
+      setUploadCategory("");
+      setUploadDescription("");
+    } catch (err) {
+      setDriveLinkError(
+        err instanceof Error ? err.message : "Failed to add Drive link.",
+      );
+    } finally {
+      setIsDriveSubmitting(false);
     }
   };
 
@@ -1207,251 +1272,454 @@ function AdminPanel() {
               style={{ border: "1px solid rgba(201,176,122,0.2)" }}
               data-ocid="admin.upload.panel"
             >
-              <h3 className="text-base font-semibold text-white mb-6 flex items-center gap-2">
+              <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
                 <Upload className="w-4 h-4" style={{ color: "#C9B07A" }} />
-                Upload New Media
+                Add Media
               </h3>
 
-              <form onSubmit={handleUpload} className="flex flex-col gap-5">
-                {/* Drag & Drop Zone */}
-                <label
-                  htmlFor="file-upload-input"
-                  className={`relative rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer block ${
-                    dragOver
-                      ? "border-[#C9B07A] bg-[rgba(201,176,122,0.08)]"
-                      : "border-white/20 hover:border-white/40 hover:bg-white/5"
-                  }`}
-                  style={{ minHeight: "120px" }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragOver(true);
-                  }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={handleDrop}
-                  data-ocid="admin.dropzone"
-                >
-                  <input
-                    ref={fileInputRef}
-                    id="file-upload-input"
-                    type="file"
-                    accept="video/*,image/*"
-                    className="sr-only"
-                    onChange={(e) =>
-                      handleFileChange(e.target.files?.[0] ?? null)
+              {/* Mode toggle */}
+              <div className="flex gap-2 mb-5 p-1 rounded-xl bg-white/5 border border-white/10">
+                {(["file", "drive"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      setUploadMode(mode);
+                      setUploadError("");
+                      setDriveLinkError("");
+                      setUploadSuccess(false);
+                      setDriveLinkSuccess(false);
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 ${uploadMode === mode ? "text-[#071432]" : "text-white/50 hover:text-white/80"}`}
+                    style={
+                      uploadMode === mode ? { backgroundColor: "#C9B07A" } : {}
                     }
-                    data-ocid="admin.upload_button"
-                  />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4">
-                    {selectedFile ? (
-                      <>
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: "rgba(201,176,122,0.15)" }}
+                    data-ocid={`admin.mode_${mode}.toggle`}
+                  >
+                    {mode === "file" ? "Upload File" : "Google Drive"}
+                  </button>
+                ))}
+              </div>
+
+              {/* File upload form */}
+              {uploadMode === "file" && (
+                <form onSubmit={handleUpload} className="flex flex-col gap-5">
+                  {/* Drag & Drop Zone */}
+                  <label
+                    htmlFor="file-upload-input"
+                    className={`relative rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer block ${
+                      dragOver
+                        ? "border-[#C9B07A] bg-[rgba(201,176,122,0.08)]"
+                        : "border-white/20 hover:border-white/40 hover:bg-white/5"
+                    }`}
+                    style={{ minHeight: "120px" }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOver(true);
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={handleDrop}
+                    data-ocid="admin.dropzone"
+                  >
+                    <input
+                      ref={fileInputRef}
+                      id="file-upload-input"
+                      type="file"
+                      accept="video/*,image/*"
+                      className="sr-only"
+                      onChange={(e) =>
+                        handleFileChange(e.target.files?.[0] ?? null)
+                      }
+                      data-ocid="admin.upload_button"
+                    />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4">
+                      {selectedFile ? (
+                        <>
+                          <div
+                            className="w-8 h-8 rounded-lg flex items-center justify-center"
+                            style={{
+                              backgroundColor: "rgba(201,176,122,0.15)",
+                            }}
+                          >
+                            {selectedFile.type.startsWith("video/") ? (
+                              <Film
+                                className="w-4 h-4"
+                                style={{ color: "#C9B07A" }}
+                              />
+                            ) : (
+                              <Upload
+                                className="w-4 h-4"
+                                style={{ color: "#C9B07A" }}
+                              />
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-white text-center truncate max-w-full">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-xs" style={{ color: "#A9B2C7" }}>
+                            {(selectedFile.size / 1024 / 1024).toFixed(1)} MB
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload
+                            className="w-6 h-6 mb-1"
+                            style={{ color: "#A9B2C7" }}
+                          />
+                          <p
+                            className="text-sm text-center"
+                            style={{ color: "#A9B2C7" }}
+                          >
+                            Drag & drop or{" "}
+                            <span style={{ color: "#C9B07A" }}>browse</span>
+                          </p>
+                          <p
+                            className="text-xs"
+                            style={{ color: "#A9B2C7", opacity: 0.6 }}
+                          >
+                            Videos & images — no size limit
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </label>
+
+                  {/* Title */}
+                  <div>
+                    <label
+                      htmlFor="upload-title"
+                      className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                    >
+                      Title *
+                    </label>
+                    <Input
+                      id="upload-title"
+                      required
+                      placeholder="e.g. Southeast Asia Road Trip"
+                      value={uploadTitle}
+                      onChange={(e) => setUploadTitle(e.target.value)}
+                      className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      data-ocid="admin.title.input"
+                    />
+                  </div>
+
+                  {/* Category */}
+                  <div>
+                    <label
+                      htmlFor="upload-category"
+                      className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                    >
+                      Category *
+                    </label>
+                    <Select
+                      value={uploadCategory}
+                      onValueChange={setUploadCategory}
+                      required
+                    >
+                      <SelectTrigger
+                        className="bg-white/5 border-white/15 text-white focus:ring-0"
+                        data-ocid="admin.category.select"
+                      >
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#071432] border-white/15">
+                        {CATEGORIES.map((cat) => (
+                          <SelectItem
+                            key={cat}
+                            value={cat}
+                            className="text-white focus:bg-white/10 focus:text-white"
+                          >
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label
+                      htmlFor="upload-desc"
+                      className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                    >
+                      Description{" "}
+                      <span style={{ color: "#A9B2C7" }}>(optional)</span>
+                    </label>
+                    <Textarea
+                      id="upload-desc"
+                      rows={3}
+                      placeholder="Brief description of this project..."
+                      value={uploadDescription}
+                      onChange={(e) => setUploadDescription(e.target.value)}
+                      className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none"
+                      data-ocid="admin.description.textarea"
+                    />
+                  </div>
+
+                  {/* Upload progress */}
+                  {isUploading && (
+                    <div data-ocid="admin.upload.loading_state">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs" style={{ color: "#A9B2C7" }}>
+                          Uploading...
+                        </span>
+                        <span
+                          className="text-xs font-semibold"
+                          style={{ color: "#C9B07A" }}
                         >
-                          {selectedFile.type.startsWith("video/") ? (
-                            <Film
-                              className="w-4 h-4"
-                              style={{ color: "#C9B07A" }}
-                            />
-                          ) : (
-                            <Upload
-                              className="w-4 h-4"
-                              style={{ color: "#C9B07A" }}
-                            />
-                          )}
-                        </div>
-                        <p className="text-sm font-medium text-white text-center truncate max-w-full">
-                          {selectedFile.name}
-                        </p>
-                        <p className="text-xs" style={{ color: "#A9B2C7" }}>
-                          {(selectedFile.size / 1024 / 1024).toFixed(1)} MB
-                        </p>
+                          {Math.round(uploadProgress)}%
+                        </span>
+                      </div>
+                      <Progress
+                        value={uploadProgress}
+                        className="h-1.5 bg-white/10"
+                      />
+                    </div>
+                  )}
+
+                  {/* Error */}
+                  {uploadError && (
+                    <p
+                      className="text-xs p-3 rounded-lg"
+                      style={{
+                        color: "#ef4444",
+                        backgroundColor: "rgba(239,68,68,0.1)",
+                      }}
+                      data-ocid="admin.upload.error_state"
+                    >
+                      {uploadError}
+                    </p>
+                  )}
+
+                  {/* Success */}
+                  {uploadSuccess && (
+                    <p
+                      className="text-xs p-3 rounded-lg"
+                      style={{
+                        color: "#4ade80",
+                        backgroundColor: "rgba(74,222,128,0.1)",
+                      }}
+                      data-ocid="admin.upload.success_state"
+                    >
+                      ✓ Media uploaded successfully!
+                    </p>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={
+                      isUploading ||
+                      !selectedFile ||
+                      !uploadTitle ||
+                      !uploadCategory
+                    }
+                    className="w-full font-semibold py-5"
+                    style={{
+                      backgroundColor:
+                        isUploading ||
+                        !selectedFile ||
+                        !uploadTitle ||
+                        !uploadCategory
+                          ? undefined
+                          : "#C9B07A",
+                      color:
+                        isUploading ||
+                        !selectedFile ||
+                        !uploadTitle ||
+                        !uploadCategory
+                          ? undefined
+                          : "#071432",
+                    }}
+                    data-ocid="admin.upload.submit_button"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
                       </>
                     ) : (
                       <>
-                        <Upload
-                          className="w-6 h-6 mb-1"
-                          style={{ color: "#A9B2C7" }}
-                        />
-                        <p
-                          className="text-sm text-center"
-                          style={{ color: "#A9B2C7" }}
-                        >
-                          Drag & drop or{" "}
-                          <span style={{ color: "#C9B07A" }}>browse</span>
-                        </p>
-                        <p
-                          className="text-xs"
-                          style={{ color: "#A9B2C7", opacity: 0.6 }}
-                        >
-                          Videos & images — no size limit
-                        </p>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload to Portfolio
                       </>
                     )}
-                  </div>
-                </label>
+                  </Button>
+                </form>
+              )}
 
-                {/* Title */}
-                <div>
-                  <label
-                    htmlFor="upload-title"
-                    className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
-                  >
-                    Title *
-                  </label>
-                  <Input
-                    id="upload-title"
-                    required
-                    placeholder="e.g. Southeast Asia Road Trip"
-                    value={uploadTitle}
-                    onChange={(e) => setUploadTitle(e.target.value)}
-                    className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0"
-                    data-ocid="admin.title.input"
-                  />
-                </div>
-
-                {/* Category */}
-                <div>
-                  <label
-                    htmlFor="upload-category"
-                    className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
-                  >
-                    Category *
-                  </label>
-                  <Select
-                    value={uploadCategory}
-                    onValueChange={setUploadCategory}
-                    required
-                  >
-                    <SelectTrigger
-                      className="bg-white/5 border-white/15 text-white focus:ring-0"
-                      data-ocid="admin.category.select"
+              {/* Google Drive form */}
+              {uploadMode === "drive" && (
+                <form
+                  onSubmit={handleDriveSubmit}
+                  className="flex flex-col gap-5"
+                >
+                  {/* Title */}
+                  <div>
+                    <label
+                      htmlFor="drive-upload-title"
+                      className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
                     >
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#071432] border-white/15">
-                      {CATEGORIES.map((cat) => (
-                        <SelectItem
-                          key={cat}
-                          value={cat}
-                          className="text-white focus:bg-white/10 focus:text-white"
-                        >
-                          {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label
-                    htmlFor="upload-desc"
-                    className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
-                  >
-                    Description{" "}
-                    <span style={{ color: "#A9B2C7" }}>(optional)</span>
-                  </label>
-                  <Textarea
-                    id="upload-desc"
-                    rows={3}
-                    placeholder="Brief description of this project..."
-                    value={uploadDescription}
-                    onChange={(e) => setUploadDescription(e.target.value)}
-                    className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none"
-                    data-ocid="admin.description.textarea"
-                  />
-                </div>
-
-                {/* Upload progress */}
-                {isUploading && (
-                  <div data-ocid="admin.upload.loading_state">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs" style={{ color: "#A9B2C7" }}>
-                        Uploading...
-                      </span>
-                      <span
-                        className="text-xs font-semibold"
-                        style={{ color: "#C9B07A" }}
-                      >
-                        {Math.round(uploadProgress)}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={uploadProgress}
-                      className="h-1.5 bg-white/10"
+                      Title *
+                    </label>
+                    <Input
+                      id="drive-upload-title"
+                      required
+                      placeholder="e.g. Southeast Asia Road Trip"
+                      value={uploadTitle}
+                      onChange={(e) => setUploadTitle(e.target.value)}
+                      className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      data-ocid="admin.drive_title.input"
                     />
                   </div>
-                )}
 
-                {/* Error */}
-                {uploadError && (
-                  <p
-                    className="text-xs p-3 rounded-lg"
-                    style={{
-                      color: "#ef4444",
-                      backgroundColor: "rgba(239,68,68,0.1)",
-                    }}
-                    data-ocid="admin.upload.error_state"
-                  >
-                    {uploadError}
-                  </p>
-                )}
+                  {/* Category */}
+                  <div>
+                    <label
+                      htmlFor="drive-upload-category"
+                      className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                    >
+                      Category *
+                    </label>
+                    <Select
+                      value={uploadCategory}
+                      onValueChange={setUploadCategory}
+                      required
+                    >
+                      <SelectTrigger
+                        className="bg-white/5 border-white/15 text-white focus:ring-0"
+                        data-ocid="admin.drive_category.select"
+                      >
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#071432] border-white/15">
+                        {CATEGORIES.map((cat) => (
+                          <SelectItem
+                            key={cat}
+                            value={cat}
+                            className="text-white focus:bg-white/10 focus:text-white"
+                          >
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                {/* Success */}
-                {uploadSuccess && (
-                  <p
-                    className="text-xs p-3 rounded-lg"
-                    style={{
-                      color: "#4ade80",
-                      backgroundColor: "rgba(74,222,128,0.1)",
-                    }}
-                    data-ocid="admin.upload.success_state"
-                  >
-                    ✓ Media uploaded successfully!
-                  </p>
-                )}
+                  {/* Google Drive Link */}
+                  <div>
+                    <label
+                      htmlFor="drive-link-input"
+                      className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                    >
+                      Google Drive Link *
+                    </label>
+                    <Input
+                      id="drive-link-input"
+                      required
+                      placeholder="https://drive.google.com/file/d/..."
+                      value={driveLink}
+                      onChange={(e) => setDriveLink(e.target.value)}
+                      className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0"
+                      data-ocid="admin.drive_link.input"
+                    />
+                    <p
+                      className="mt-2 text-xs leading-relaxed"
+                      style={{ color: "#A9B2C7", opacity: 0.7 }}
+                    >
+                      Share your video on Google Drive → set to &ldquo;Anyone
+                      with the link&rdquo; → paste the link here
+                    </p>
+                  </div>
 
-                <Button
-                  type="submit"
-                  disabled={
-                    isUploading ||
-                    !selectedFile ||
-                    !uploadTitle ||
-                    !uploadCategory
-                  }
-                  className="w-full font-semibold py-5"
-                  style={{
-                    backgroundColor:
-                      isUploading ||
-                      !selectedFile ||
-                      !uploadTitle ||
-                      !uploadCategory
-                        ? undefined
-                        : "#C9B07A",
-                    color:
-                      isUploading ||
-                      !selectedFile ||
-                      !uploadTitle ||
-                      !uploadCategory
-                        ? undefined
-                        : "#071432",
-                  }}
-                  data-ocid="admin.upload.submit_button"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload to Portfolio
-                    </>
+                  {/* Description */}
+                  <div>
+                    <label
+                      htmlFor="drive-upload-desc"
+                      className="block text-xs font-semibold uppercase tracking-wider mb-2 text-white"
+                    >
+                      Description{" "}
+                      <span style={{ color: "#A9B2C7" }}>(optional)</span>
+                    </label>
+                    <Textarea
+                      id="drive-upload-desc"
+                      rows={3}
+                      placeholder="Brief description of this project..."
+                      value={uploadDescription}
+                      onChange={(e) => setUploadDescription(e.target.value)}
+                      className="bg-white/5 border-white/15 text-white placeholder:text-white/30 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none"
+                      data-ocid="admin.drive_description.textarea"
+                    />
+                  </div>
+
+                  {/* Error */}
+                  {driveLinkError && (
+                    <p
+                      className="text-xs p-3 rounded-lg"
+                      style={{
+                        color: "#ef4444",
+                        backgroundColor: "rgba(239,68,68,0.1)",
+                      }}
+                      data-ocid="admin.drive.error_state"
+                    >
+                      {driveLinkError}
+                    </p>
                   )}
-                </Button>
-              </form>
+
+                  {/* Success */}
+                  {driveLinkSuccess && (
+                    <p
+                      className="text-xs p-3 rounded-lg"
+                      style={{
+                        color: "#4ade80",
+                        backgroundColor: "rgba(74,222,128,0.1)",
+                      }}
+                      data-ocid="admin.drive.success_state"
+                    >
+                      ✓ Video added from Google Drive!
+                    </p>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={
+                      isDriveSubmitting ||
+                      !driveLink ||
+                      !uploadTitle ||
+                      !uploadCategory
+                    }
+                    className="w-full font-semibold py-5"
+                    style={{
+                      backgroundColor:
+                        isDriveSubmitting ||
+                        !driveLink ||
+                        !uploadTitle ||
+                        !uploadCategory
+                          ? undefined
+                          : "#C9B07A",
+                      color:
+                        isDriveSubmitting ||
+                        !driveLink ||
+                        !uploadTitle ||
+                        !uploadCategory
+                          ? undefined
+                          : "#071432",
+                    }}
+                    data-ocid="admin.drive.submit_button"
+                  >
+                    {isDriveSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Add to Portfolio
+                      </>
+                    )}
+                  </Button>
+                </form>
+              )}
             </motion.div>
 
             {/* Portfolio Items List */}
@@ -1520,9 +1788,10 @@ function AdminPanel() {
                     >
                       {/* Thumbnail */}
                       <div className="w-16 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-white/10">
-                        {item.mediaType === "video" ? (
+                        {item.mediaType === "video" ||
+                        item.mediaType === "drive-video" ? (
                           <div
-                            className="w-full h-full flex items-center justify-center"
+                            className="w-full h-full flex flex-col items-center justify-center gap-0.5"
                             style={{
                               backgroundColor: "rgba(201,176,122,0.1)",
                             }}
@@ -1531,6 +1800,14 @@ function AdminPanel() {
                               className="w-4 h-4"
                               style={{ color: "#C9B07A" }}
                             />
+                            {item.mediaType === "drive-video" && (
+                              <span
+                                className="text-[8px] font-bold uppercase tracking-wider"
+                                style={{ color: "#C9B07A" }}
+                              >
+                                GDrive
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <img
