@@ -16,6 +16,7 @@ import {
   ChevronDown,
   Film,
   Home,
+  Linkedin,
   Loader2,
   LogOut,
   Menu,
@@ -29,10 +30,12 @@ import {
   Upload,
   Users,
   X,
+  Youtube,
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SiTiktok } from "react-icons/si";
 import { ExternalBlob, type PortfolioItem } from "./backend";
 import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
@@ -53,6 +56,12 @@ interface ValueProp {
   icon: React.ReactNode;
   title: string;
   desc: string;
+}
+
+interface SocialLink {
+  icon: React.ReactNode;
+  label: string;
+  href: string;
 }
 
 // ── Data ────────────────────────────────────────────────────────────────────
@@ -99,15 +108,6 @@ const CATEGORIES = [
   "Travel Vlog",
   "Short-Form Content",
   "Lifestyle Vlog",
-  "Informative",
-  "Entertainment",
-  "Army",
-  "Long-Form",
-  "Faceless",
-  "Animation",
-  "Science",
-  "History",
-  "AI",
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ function Navbar() {
           type="button"
           onClick={() => handleNavClick("#home")}
           data-ocid="nav.link"
-          className="focus-visible:outline-none mt-2"
+          className="focus-visible:outline-none"
           aria-label="Go to home"
         >
           <Logo />
@@ -255,10 +255,7 @@ function Navbar() {
                 {isActive && (
                   <span
                     className="absolute bottom-0 left-0 right-0 h-px"
-                    style={{
-                      backgroundColor: "#FFD700",
-                      boxShadow: "0 0 6px rgba(255, 215, 0, 0.7)",
-                    }}
+                    style={{ backgroundColor: "#C9B07A" }}
                   />
                 )}
               </button>
@@ -276,10 +273,8 @@ function Navbar() {
                 onClick={() => scrollTo("admin-panel")}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 hover:bg-white/10"
                 style={{
-                  borderColor: "rgba(255,215,0,0.4)",
-                  color: "#FFD700",
-                  textShadow:
-                    "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
+                  borderColor: "rgba(201,176,122,0.4)",
+                  color: "#C9B07A",
                 }}
                 data-ocid="nav.admin.button"
               >
@@ -317,7 +312,7 @@ function Navbar() {
             type="button"
             onClick={() => handleNavClick("#contact")}
             className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:shadow-gold"
-            style={{ backgroundColor: "#FFD700", color: "#071432" }}
+            style={{ backgroundColor: "#C9B07A", color: "#071432" }}
             data-ocid="nav.cta.button"
           >
             Work with Us
@@ -367,7 +362,7 @@ function Navbar() {
                 type="button"
                 onClick={() => handleNavClick("#contact")}
                 className="flex-1 self-start px-5 py-2.5 rounded-full text-sm font-semibold"
-                style={{ backgroundColor: "#FFD700", color: "#071432" }}
+                style={{ backgroundColor: "#C9B07A", color: "#071432" }}
                 data-ocid="nav.mobile.cta.button"
               >
                 Work with Us
@@ -398,10 +393,8 @@ function Navbar() {
                     }}
                     className="flex items-center gap-1.5 px-3 py-2.5 rounded-full text-xs font-medium border transition-all"
                     style={{
-                      borderColor: "rgba(255,215,0,0.4)",
-                      color: "#FFD700",
-                      textShadow:
-                        "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
+                      borderColor: "rgba(201,176,122,0.4)",
+                      color: "#C9B07A",
                     }}
                     data-ocid="nav.mobile.admin.button"
                   >
@@ -451,30 +444,14 @@ function HeroSection() {
           transition={{ duration: 0.6 }}
           className="inline-flex items-center gap-3 mb-8"
         >
-          <span
-            className="h-px w-10"
-            style={{
-              backgroundColor: "#FFD700",
-              boxShadow: "0 0 6px rgba(255, 215, 0, 0.7)",
-            }}
-          />
+          <span className="h-px w-10" style={{ backgroundColor: "#C9B07A" }} />
           <span
             className="text-xs font-semibold uppercase tracking-[0.3em]"
-            style={{
-              color: "#FFD700",
-              textShadow:
-                "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
-            }}
+            style={{ color: "#C9B07A" }}
           >
             EST. 2020
           </span>
-          <span
-            className="h-px w-10"
-            style={{
-              backgroundColor: "#FFD700",
-              boxShadow: "0 0 6px rgba(255, 215, 0, 0.7)",
-            }}
-          />
+          <span className="h-px w-10" style={{ backgroundColor: "#C9B07A" }} />
         </motion.div>
 
         {/* Headline */}
@@ -486,16 +463,7 @@ function HeroSection() {
           style={{ fontFamily: "Bricolage Grotesque, sans-serif" }}
         >
           Turning Your Raw Visions Into{" "}
-          <span
-            style={{
-              color: "#FFD700",
-              textShadow:
-                "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
-            }}
-          >
-            Scroll Stopping
-          </span>{" "}
-          Reality.
+          <span style={{ color: "#C9B07A" }}>Scroll Stopping</span> Reality.
         </motion.h1>
 
         {/* Subtext */}
@@ -522,7 +490,7 @@ function HeroSection() {
             type="button"
             onClick={() => scrollTo("contact")}
             className="flex items-center gap-2.5 px-8 py-3.5 rounded-full text-sm font-bold transition-all duration-200 hover:shadow-gold hover:scale-105 active:scale-95"
-            style={{ backgroundColor: "#FFD700", color: "#071432" }}
+            style={{ backgroundColor: "#C9B07A", color: "#071432" }}
             data-ocid="hero.cta.button"
           >
             <Play className="w-4 h-4 fill-current" />
@@ -575,11 +543,7 @@ function ServicesSection() {
         <div className="text-center mb-16">
           <p
             className="text-xs font-semibold uppercase tracking-[0.3em] mb-3"
-            style={{
-              color: "#FFD700",
-              textShadow:
-                "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
-            }}
+            style={{ color: "#C9B07A" }}
           >
             What We Do
           </p>
@@ -612,9 +576,8 @@ function ServicesSection() {
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{
-                  backgroundColor: "rgba(255,215,0,0.12)",
-                  color: "#FFD700",
-                  filter: "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
+                  backgroundColor: "rgba(201,176,122,0.12)",
+                  color: "#C9B07A",
                 }}
               >
                 {service.icon}
@@ -663,11 +626,7 @@ function ProcessSection() {
         <div className="text-center mb-16">
           <p
             className="text-xs font-semibold uppercase tracking-[0.3em] mb-3"
-            style={{
-              color: "#FFD700",
-              textShadow:
-                "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
-            }}
+            style={{ color: "#C9B07A" }}
           >
             Our Story
           </p>
@@ -703,9 +662,8 @@ function ProcessSection() {
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
                 style={{
-                  backgroundColor: "rgba(255,215,0,0.12)",
-                  color: "#FFD700",
-                  filter: "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
+                  backgroundColor: "rgba(201,176,122,0.12)",
+                  color: "#C9B07A",
                 }}
               >
                 {v.icon}
@@ -780,15 +738,9 @@ function PortfolioSection() {
           >
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5"
-              style={{ backgroundColor: "rgba(255,215,0,0.10)" }}
+              style={{ backgroundColor: "rgba(201,176,122,0.10)" }}
             >
-              <Film
-                className="w-7 h-7"
-                style={{
-                  color: "#FFD700",
-                  filter: "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
-                }}
-              />
+              <Film className="w-7 h-7" style={{ color: "#C9B07A" }} />
             </div>
             <h3
               className="text-xl font-semibold text-white mb-2"
@@ -858,11 +810,7 @@ function PortfolioSection() {
                 <div className="p-5">
                   <span
                     className="text-xs font-semibold uppercase tracking-wider"
-                    style={{
-                      color: "#FFD700",
-                      textShadow:
-                        "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
-                    }}
+                    style={{ color: "#C9B07A" }}
                   >
                     {item.category}
                   </span>
@@ -921,11 +869,7 @@ ${formState.message}`);
         >
           <p
             className="text-xs font-semibold uppercase tracking-[0.3em] mb-3"
-            style={{
-              color: "#FFD700",
-              textShadow:
-                "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
-            }}
+            style={{ color: "#C9B07A" }}
           >
             Let&apos;s Connect
           </p>
@@ -953,15 +897,9 @@ ${formState.message}`);
             >
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
-                style={{ backgroundColor: "rgba(255,215,0,0.15)" }}
+                style={{ backgroundColor: "rgba(201,176,122,0.15)" }}
               >
-                <Send
-                  className="w-6 h-6"
-                  style={{
-                    color: "#FFD700",
-                    filter: "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
-                  }}
-                />
+                <Send className="w-6 h-6" style={{ color: "#C9B07A" }} />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">
                 Message Sent!
@@ -1045,7 +983,7 @@ ${formState.message}`);
               <button
                 type="submit"
                 className="flex items-center justify-center gap-2.5 w-full py-3.5 rounded-full text-sm font-bold transition-all duration-200 hover:shadow-gold hover:scale-[1.02] active:scale-95"
-                style={{ backgroundColor: "#FFD700", color: "#071432" }}
+                style={{ backgroundColor: "#C9B07A", color: "#071432" }}
                 data-ocid="contact.submit.button"
               >
                 <Send className="w-4 h-4" />
@@ -1216,15 +1154,9 @@ function AdminPanel() {
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: "rgba(255,215,0,0.15)" }}
+              style={{ backgroundColor: "rgba(201,176,122,0.15)" }}
             >
-              <Settings
-                className="w-4 h-4"
-                style={{
-                  color: "#FFD700",
-                  filter: "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
-                }}
-              />
+              <Settings className="w-4 h-4" style={{ color: "#C9B07A" }} />
             </div>
             <div>
               <h2
@@ -1254,15 +1186,12 @@ function AdminPanel() {
         {(adminLoading || isFetching) && (
           <div
             className="glass-card rounded-2xl p-8 text-center mb-8"
-            style={{ border: "1px solid rgba(255,215,0,0.25)" }}
+            style={{ border: "1px solid rgba(201,176,122,0.25)" }}
             data-ocid="admin.loading_state"
           >
             <Loader2
               className="w-6 h-6 animate-spin mx-auto mb-3"
-              style={{
-                color: "#FFD700",
-                filter: "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
-              }}
+              style={{ color: "#C9B07A" }}
             />
             <p className="text-sm" style={{ color: "#A9B2C7" }}>
               Checking permissions...
@@ -1275,20 +1204,14 @@ function AdminPanel() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             className="glass-card rounded-2xl p-10 mb-8 text-center"
-            style={{ border: "1px solid rgba(255,215,0,0.3)" }}
+            style={{ border: "1px solid rgba(201,176,122,0.3)" }}
             data-ocid="admin.claim.panel"
           >
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 mx-auto"
-              style={{ backgroundColor: "rgba(255,215,0,0.12)" }}
+              style={{ backgroundColor: "rgba(201,176,122,0.12)" }}
             >
-              <Settings
-                className="w-6 h-6"
-                style={{
-                  color: "#FFD700",
-                  filter: "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
-                }}
-              />
+              <Settings className="w-6 h-6" style={{ color: "#C9B07A" }} />
             </div>
             <h3 className="text-xl font-semibold text-white mb-3">
               Claim Admin Access
@@ -1304,7 +1227,7 @@ function AdminPanel() {
               onClick={() => claimAdminMutation.mutate()}
               disabled={claimAdminMutation.isPending}
               className="font-semibold px-10 py-3 text-base"
-              style={{ backgroundColor: "#FFD700", color: "#071432" }}
+              style={{ backgroundColor: "#C9B07A", color: "#071432" }}
               data-ocid="admin.claim.button"
             >
               {claimAdminMutation.isPending ? (
@@ -1339,17 +1262,11 @@ function AdminPanel() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
               className="glass-card rounded-2xl p-7"
-              style={{ border: "1px solid rgba(255,215,0,0.2)" }}
+              style={{ border: "1px solid rgba(201,176,122,0.2)" }}
               data-ocid="admin.upload.panel"
             >
               <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
-                <Upload
-                  className="w-4 h-4"
-                  style={{
-                    color: "#FFD700",
-                    filter: "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
-                  }}
-                />
+                <Upload className="w-4 h-4" style={{ color: "#C9B07A" }} />
                 Add Media
               </h3>
 
@@ -1368,12 +1285,7 @@ function AdminPanel() {
                     }}
                     className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 ${uploadMode === mode ? "text-[#071432]" : "text-white/50 hover:text-white/80"}`}
                     style={
-                      uploadMode === mode
-                        ? {
-                            backgroundColor: "#FFD700",
-                            boxShadow: "0 0 6px rgba(255, 215, 0, 0.7)",
-                          }
-                        : {}
+                      uploadMode === mode ? { backgroundColor: "#C9B07A" } : {}
                     }
                     data-ocid={`admin.mode_${mode}.toggle`}
                   >
@@ -1390,7 +1302,7 @@ function AdminPanel() {
                     htmlFor="file-upload-input"
                     className={`relative rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer block ${
                       dragOver
-                        ? "border-[#FFD700] bg-[rgba(255,215,0,0.08)]"
+                        ? "border-[#C9B07A] bg-[rgba(201,176,122,0.08)]"
                         : "border-white/20 hover:border-white/40 hover:bg-white/5"
                     }`}
                     style={{ minHeight: "120px" }}
@@ -1419,26 +1331,18 @@ function AdminPanel() {
                           <div
                             className="w-8 h-8 rounded-lg flex items-center justify-center"
                             style={{
-                              backgroundColor: "rgba(255,215,0,0.15)",
+                              backgroundColor: "rgba(201,176,122,0.15)",
                             }}
                           >
                             {selectedFile.type.startsWith("video/") ? (
                               <Film
                                 className="w-4 h-4"
-                                style={{
-                                  color: "#FFD700",
-                                  filter:
-                                    "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
-                                }}
+                                style={{ color: "#C9B07A" }}
                               />
                             ) : (
                               <Upload
                                 className="w-4 h-4"
-                                style={{
-                                  color: "#FFD700",
-                                  filter:
-                                    "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
-                                }}
+                                style={{ color: "#C9B07A" }}
                               />
                             )}
                           </div>
@@ -1460,15 +1364,7 @@ function AdminPanel() {
                             style={{ color: "#A9B2C7" }}
                           >
                             Drag & drop or{" "}
-                            <span
-                              style={{
-                                color: "#FFD700",
-                                textShadow:
-                                  "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
-                              }}
-                            >
-                              browse
-                            </span>
+                            <span style={{ color: "#C9B07A" }}>browse</span>
                           </p>
                           <p
                             className="text-xs"
@@ -1562,11 +1458,7 @@ function AdminPanel() {
                         </span>
                         <span
                           className="text-xs font-semibold"
-                          style={{
-                            color: "#FFD700",
-                            textShadow:
-                              "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
-                          }}
+                          style={{ color: "#C9B07A" }}
                         >
                           {Math.round(uploadProgress)}%
                         </span>
@@ -1622,7 +1514,7 @@ function AdminPanel() {
                         !uploadTitle ||
                         !uploadCategory
                           ? undefined
-                          : "#FFD700",
+                          : "#C9B07A",
                       color:
                         isUploading ||
                         !selectedFile ||
@@ -1796,7 +1688,7 @@ function AdminPanel() {
                         !uploadTitle ||
                         !uploadCategory
                           ? undefined
-                          : "#FFD700",
+                          : "#C9B07A",
                       color:
                         isDriveSubmitting ||
                         !driveLink ||
@@ -1829,18 +1721,12 @@ function AdminPanel() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.08 }}
               className="glass-card rounded-2xl p-7"
-              style={{ border: "1px solid rgba(255,215,0,0.2)" }}
+              style={{ border: "1px solid rgba(201,176,122,0.2)" }}
               data-ocid="admin.items.panel"
             >
               <h3 className="text-base font-semibold text-white mb-6 flex items-center justify-between">
                 <span className="flex items-center gap-2">
-                  <Film
-                    className="w-4 h-4"
-                    style={{
-                      color: "#FFD700",
-                      filter: "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
-                    }}
-                  />
+                  <Film className="w-4 h-4" style={{ color: "#C9B07A" }} />
                   Portfolio Items
                 </span>
                 {portfolioItems && portfolioItems.length > 0 && (
@@ -1848,9 +1734,8 @@ function AdminPanel() {
                     variant="secondary"
                     className="text-xs"
                     style={{
-                      backgroundColor: "rgba(255,215,0,0.15)",
-                      color: "#FFD700",
-                      filter: "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
+                      backgroundColor: "rgba(201,176,122,0.15)",
+                      color: "#C9B07A",
                     }}
                   >
                     {portfolioItems.length}
@@ -1865,10 +1750,7 @@ function AdminPanel() {
                 >
                   <Loader2
                     className="w-5 h-5 animate-spin"
-                    style={{
-                      color: "#FFD700",
-                      filter: "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
-                    }}
+                    style={{ color: "#C9B07A" }}
                   />
                 </div>
               )}
@@ -1904,25 +1786,17 @@ function AdminPanel() {
                           <div
                             className="w-full h-full flex flex-col items-center justify-center gap-0.5"
                             style={{
-                              backgroundColor: "rgba(255,215,0,0.1)",
+                              backgroundColor: "rgba(201,176,122,0.1)",
                             }}
                           >
                             <Film
                               className="w-4 h-4"
-                              style={{
-                                color: "#FFD700",
-                                filter:
-                                  "drop-shadow(0 0 6px rgba(255, 215, 0, 0.65))",
-                              }}
+                              style={{ color: "#C9B07A" }}
                             />
                             {item.mediaType === "drive-video" && (
                               <span
                                 className="text-[8px] font-bold uppercase tracking-wider"
-                                style={{
-                                  color: "#FFD700",
-                                  textShadow:
-                                    "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
-                                }}
+                                style={{ color: "#C9B07A" }}
                               >
                                 GDrive
                               </span>
@@ -1982,10 +1856,16 @@ function Footer() {
   const hostname =
     typeof window !== "undefined" ? window.location.hostname : "";
 
+  const socialLinks: SocialLink[] = [
+    { icon: <Youtube className="w-4 h-4" />, label: "YouTube", href: "#" },
+    { icon: <SiTiktok className="w-4 h-4" />, label: "TikTok", href: "#" },
+    { icon: <Linkedin className="w-4 h-4" />, label: "LinkedIn", href: "#" },
+  ];
+
   return (
     <footer className="relative pt-16 pb-8 px-6 section-divider">
       <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
           {/* Brand */}
           <div>
             <Logo />
@@ -2022,6 +1902,43 @@ function Footer() {
               ))}
             </ul>
           </div>
+
+          {/* Social */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white mb-5">
+              Follow Us
+            </p>
+            <div className="flex gap-3">
+              {socialLinks.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  aria-label={s.label}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center glass-card transition-all duration-200 hover:border-white/30 hover:bg-white/10"
+                  style={{ color: "#A9B2C7" }}
+                  data-ocid={`footer.${s.label.toLowerCase()}.link`}
+                >
+                  {s.icon}
+                </a>
+              ))}
+            </div>
+            <p
+              className="mt-6 text-sm leading-relaxed"
+              style={{ color: "#A9B2C7" }}
+            >
+              Ready to elevate your content?
+              <br />
+              <button
+                type="button"
+                onClick={() => scrollTo("contact")}
+                className="font-medium transition-colors hover:text-white"
+                style={{ color: "#C9B07A" }}
+                data-ocid="footer.contact.button"
+              >
+                Let&apos;s talk &rarr;
+              </button>
+            </p>
+          </div>
         </div>
 
         {/* Divider + copyright */}
@@ -2034,17 +1951,7 @@ function Footer() {
         >
           <p>&copy; {currentYear} Crisp Media. All rights reserved.</p>
           <p>
-            Built with{" "}
-            <span
-              style={{
-                color: "#FFD700",
-                textShadow:
-                  "0 0 8px rgba(255, 215, 0, 0.7), 0 0 16px rgba(255, 215, 0, 0.4)",
-              }}
-            >
-              &#9829;
-            </span>{" "}
-            using{" "}
+            Built with <span style={{ color: "#C9B07A" }}>&#9829;</span> using{" "}
             <a
               href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(hostname)}`}
               target="_blank"

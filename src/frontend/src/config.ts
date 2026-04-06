@@ -154,8 +154,16 @@ export async function createActorWithConfig(
   );
 
   const MOTOKO_DEDUPLICATION_SENTINEL = "!caf!";
+  const URL_PREFIX = "!url!";
 
   const uploadFile = async (file: ExternalBlob): Promise<Uint8Array> => {
+    // Detect URL-only blobs (e.g. Google Drive links)
+    // These have no raw bytes -- trying to fetch them triggers CORS errors.
+    // Instead, encode the URL directly with a !url! prefix.
+    const directURL = (file as unknown as { directURL?: string }).directURL;
+    if (directURL) {
+      return new TextEncoder().encode(URL_PREFIX + directURL);
+    }
     const { hash } = await storageClient.putFile(
       await file.getBytes(),
       file.onProgress,
@@ -164,8 +172,14 @@ export async function createActorWithConfig(
   };
 
   const downloadFile = async (bytes: Uint8Array): Promise<ExternalBlob> => {
-    const hashWithPrefix = new TextDecoder().decode(new Uint8Array(bytes));
-    const hash = hashWithPrefix.substring(MOTOKO_DEDUPLICATION_SENTINEL.length);
+    const decoded = new TextDecoder().decode(new Uint8Array(bytes));
+    // Check if this is a URL-only blob stored with our !url! prefix
+    if (decoded.startsWith(URL_PREFIX)) {
+      const url = decoded.slice(URL_PREFIX.length);
+      return ExternalBlob.fromURL(url);
+    }
+    // Otherwise treat as a storage hash
+    const hash = decoded.substring(MOTOKO_DEDUPLICATION_SENTINEL.length);
     const url = await storageClient.getDirectURL(hash);
     return ExternalBlob.fromURL(url);
   };
