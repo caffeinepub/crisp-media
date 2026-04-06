@@ -157,10 +157,11 @@ export async function createActorWithConfig(
   const URL_PREFIX = "!url!";
 
   const uploadFile = async (file: ExternalBlob): Promise<Uint8Array> => {
-    // Detect URL-only blobs (e.g. Google Drive links)
-    // These have no raw bytes -- trying to fetch them triggers CORS errors.
-    // Instead, encode the URL directly with a !url! prefix.
-    const directURL = (file as unknown as { directURL?: string }).directURL;
+    // Check if this is a URL-only blob (e.g. a Google Drive link)
+    // URL-only blobs have no raw bytes — fetching them via getBytes() would
+    // trigger a cross-origin fetch which is blocked by CORS and silently fails.
+    // Instead, store the URL directly with a !url! prefix so we can recover it.
+    const directURL = file.getDirectURL();
     if (directURL) {
       return new TextEncoder().encode(URL_PREFIX + directURL);
     }
@@ -173,12 +174,11 @@ export async function createActorWithConfig(
 
   const downloadFile = async (bytes: Uint8Array): Promise<ExternalBlob> => {
     const decoded = new TextDecoder().decode(new Uint8Array(bytes));
-    // Check if this is a URL-only blob stored with our !url! prefix
+    // If the bytes encode a direct URL, reconstruct the URL blob — no storage gateway needed
     if (decoded.startsWith(URL_PREFIX)) {
       const url = decoded.slice(URL_PREFIX.length);
       return ExternalBlob.fromURL(url);
     }
-    // Otherwise treat as a storage hash
     const hash = decoded.substring(MOTOKO_DEDUPLICATION_SENTINEL.length);
     const url = await storageClient.getDirectURL(hash);
     return ExternalBlob.fromURL(url);
