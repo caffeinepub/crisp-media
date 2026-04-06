@@ -99,12 +99,17 @@ async function maybeLoadMockBackend(): Promise<backendInterface | null> {
   }
 
   try {
+    // If VITE_USE_MOCK is enabled, try to load a mock backend module *if it exists*.
+    // We use import.meta.glob so builds don't fail when the mock file is absent.
     const mockModules = import.meta.glob("./mocks/backend.{ts,tsx,js,jsx}");
+
     const path = Object.keys(mockModules)[0];
     if (!path) return null;
+
     const mod = (await mockModules[path]()) as {
       mockBackend?: backendInterface;
     };
+
     return mod.mockBackend ?? null;
   } catch {
     return null;
@@ -114,6 +119,7 @@ async function maybeLoadMockBackend(): Promise<backendInterface | null> {
 export async function createActorWithConfig(
   options?: CreateActorOptions,
 ): Promise<backendInterface> {
+  // Attempt to load mock backend if enabled
   const mock = await maybeLoadMockBackend();
   if (mock) {
     return mock;
@@ -147,19 +153,9 @@ export async function createActorWithConfig(
     agent,
   );
 
-  // Sentinel prefix for deduplicated blob hashes stored via blob-storage
   const MOTOKO_DEDUPLICATION_SENTINEL = "!caf!";
-  // Sentinel prefix for URL-only blobs (e.g. Google Drive links)
-  const URL_SENTINEL = "!url!";
 
   const uploadFile = async (file: ExternalBlob): Promise<Uint8Array> => {
-    // If the blob has no raw bytes attached, it is a URL-only blob (e.g. Google Drive link).
-    // Store the URL directly as UTF-8 bytes with a !url! prefix.
-    // This avoids calling file.getBytes() which would do a CORS-blocked fetch on the Drive URL.
-    if (!file._blob) {
-      return new TextEncoder().encode(URL_SENTINEL + file.directURL);
-    }
-    // Regular file upload: push bytes to blob storage and store the hash
     const { hash } = await storageClient.putFile(
       await file.getBytes(),
       file.onProgress,
@@ -168,14 +164,8 @@ export async function createActorWithConfig(
   };
 
   const downloadFile = async (bytes: Uint8Array): Promise<ExternalBlob> => {
-    const str = new TextDecoder().decode(new Uint8Array(bytes));
-    // If the stored bytes encode a URL-only blob, return it directly as a URL blob.
-    // Do NOT call storageClient.getDirectURL() -- there is no hash, only a URL.
-    if (str.startsWith(URL_SENTINEL)) {
-      return ExternalBlob.fromURL(str.slice(URL_SENTINEL.length));
-    }
-    // Regular blob: extract hash and resolve via storage gateway
-    const hash = str.substring(MOTOKO_DEDUPLICATION_SENTINEL.length);
+    const hashWithPrefix = new TextDecoder().decode(new Uint8Array(bytes));
+    const hash = hashWithPrefix.substring(MOTOKO_DEDUPLICATION_SENTINEL.length);
     const url = await storageClient.getDirectURL(hash);
     return ExternalBlob.fromURL(url);
   };

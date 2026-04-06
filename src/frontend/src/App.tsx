@@ -166,7 +166,7 @@ function Logo() {
     <div className="flex items-center">
       <div
         className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0"
-        style={{ border: "2px solid rgba(201,176,122,0.4)" }}
+        style={{ border: "2px solid #C9B07A", backgroundColor: "white" }}
       >
         <img
           src="/assets/crisp-media-logo.png"
