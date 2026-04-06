@@ -1135,7 +1135,7 @@ function AdminPanel() {
     }
   };
 
-  if (!identity) return null;
+  if (!identity) return <div id="admin-panel" />;
 
   return (
     <section
@@ -1964,8 +1964,6 @@ function Footer() {
 
 // ── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const { identity } = useInternetIdentity();
-
   return (
     <div
       className="min-h-screen"
@@ -1981,7 +1979,7 @@ export default function App() {
         <ProcessSection />
         <PortfolioSection />
         <ContactSection />
-        {identity && <AdminPanel />}
+        <AdminPanel />
       </main>
       <Footer />
     </div>
