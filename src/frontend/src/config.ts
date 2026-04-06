@@ -154,16 +154,16 @@ export async function createActorWithConfig(
   );
 
   const MOTOKO_DEDUPLICATION_SENTINEL = "!caf!";
+  // Prefix used to identify URL-only blobs stored directly (e.g. Google Drive links)
   const URL_PREFIX = "!url!";
 
   const uploadFile = async (file: ExternalBlob): Promise<Uint8Array> => {
-    // Check if this is a URL-only blob (e.g. a Google Drive link)
-    // URL-only blobs have no raw bytes — fetching them via getBytes() would
-    // trigger a cross-origin fetch which is blocked by CORS and silently fails.
-    // Instead, store the URL directly with a !url! prefix so we can recover it.
-    const directURL = file.getDirectURL();
-    if (directURL) {
-      return new TextEncoder().encode(URL_PREFIX + directURL);
+    // A URL-only blob (created via ExternalBlob.fromURL) has _blob === null.
+    // Do NOT call getBytes() on it -- that would do a cross-origin fetch and fail with CORS.
+    // Instead, store the URL string directly with a prefix.
+    if (file._blob === null || file._blob === undefined) {
+      const directUrl = file.getDirectURL();
+      return new TextEncoder().encode(URL_PREFIX + directUrl);
     }
     const { hash } = await storageClient.putFile(
       await file.getBytes(),
@@ -174,8 +174,8 @@ export async function createActorWithConfig(
 
   const downloadFile = async (bytes: Uint8Array): Promise<ExternalBlob> => {
     const decoded = new TextDecoder().decode(new Uint8Array(bytes));
-    // If the bytes encode a direct URL, reconstruct the URL blob — no storage gateway needed
     if (decoded.startsWith(URL_PREFIX)) {
+      // This was stored as a direct URL -- reconstruct without hitting storage gateway
       const url = decoded.slice(URL_PREFIX.length);
       return ExternalBlob.fromURL(url);
     }
