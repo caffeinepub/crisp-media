@@ -840,6 +840,16 @@ function ContactSection() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const subject = encodeURIComponent(`New enquiry from ${formState.name}`);
+    const body = encodeURIComponent(`Name: ${formState.name}
+Email: ${formState.email}
+
+Message:
+${formState.message}`);
+    window.open(
+      `mailto:crispmediabusinesses@gmail.com?subject=${subject}&body=${body}`,
+      "_blank",
+    );
     setSubmitted(true);
   };
 

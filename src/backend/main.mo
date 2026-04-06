@@ -32,13 +32,38 @@ actor {
     newIndex : Nat;
   };
 
-  // Mutable variables for persistent state
-  var portfolioItems = List.empty<PortfolioItem>();
+  // Stable storage for portfolio items - persists across upgrades
+  stable var stablePortfolioItems : [PortfolioItem] = [];
 
-  // Let-binding for the access control state (not persistent)
-  let accessControlState = AccessControl.initState();
+  // Stable storage for admin state - persists across upgrades
+  stable var stableAdminAssigned : Bool = false;
+  stable var stableAdminPrincipals : [(Principal, AccessControl.UserRole)] = [];
 
-  // Helper functions for portfolio item operations (admin only)
+  // Mutable working state, initialized from stable storage
+  var portfolioItems = List.fromArray<PortfolioItem>(stablePortfolioItems);
+
+  // Access control state, initialized from stable storage
+  let accessControlState : AccessControl.AccessControlState = {
+    var adminAssigned = stableAdminAssigned;
+    userRoles = do {
+      let m = Map.empty<Principal, AccessControl.UserRole>();
+      for ((p, r) in stableAdminPrincipals.values()) { m.add(p, r) };
+      m;
+    };
+  };
+
+  // Persist mutable state to stable storage before upgrades
+  system func preupgrade() {
+    stablePortfolioItems := portfolioItems.toArray();
+    stableAdminAssigned := accessControlState.adminAssigned;
+    stableAdminPrincipals := accessControlState.userRoles.toArray();
+  };
+
+  // Restore mutable state from stable storage after upgrades
+  system func postupgrade() {
+    portfolioItems := List.fromArray<PortfolioItem>(stablePortfolioItems);
+  };
+
   func addPortfolioItemInternal(title : Text, category : Text, media : Storage.ExternalBlob, mediaType : Text, description : Text) {
     let item : PortfolioItem = {
       title;
@@ -51,7 +76,6 @@ actor {
     portfolioItems.add(item);
   };
 
-  // Helper functions for portfolio item deletion (admin only)
   func deletePortfolioItemInternal(index : Nat) {
     if (index >= portfolioItems.size()) {
       Runtime.trap("Index out of bounds");
@@ -60,7 +84,6 @@ actor {
     portfolioItems := List.fromArray(newArray);
   };
 
-  // Helper function for reordering portfolio items (admin only)
   func reorderPortfolioItemsInternal(moves : [ReorderPortfolioItem]) {
     var arr = portfolioItems.toArray();
     for (move in moves.values()) {
@@ -68,14 +91,12 @@ actor {
         Runtime.trap("Index out of bounds");
       };
       let item = arr[move.originalIndex];
-      // Remove from original position
       arr := Array.tabulate(
         arr.size() - 1,
         func(i) {
           if (i < move.originalIndex) { arr[i] } else { arr[i + 1] };
         },
       );
-      // Insert at new position
       arr := Array.tabulate(
         arr.size() + 1,
         func(i) {
@@ -90,45 +111,26 @@ actor {
     portfolioItems := List.fromArray(portfolioItems.toArray().reverse());
   };
 
-  // Helper function for updating portfolio items (admin only)
   func updatePortfolioItemInternal(index : Nat, title : ?Text, category : ?Text, media : ?Storage.ExternalBlob, mediaType : ?Text, description : ?Text) {
     if (index >= portfolioItems.size()) {
       Runtime.trap("Index out of bounds");
     };
     let item = portfolioItems.at(index);
     let updatedItem : PortfolioItem = {
-      title = switch (title) {
-        case (null) { item.title };
-        case (?newTitle) { newTitle };
-      };
-      category = switch (category) {
-        case (null) { item.category };
-        case (?newCategory) { newCategory };
-      };
-      media = switch (media) {
-        case (null) { item.media };
-        case (?newMedia) { newMedia };
-      };
-      mediaType = switch (mediaType) {
-        case (null) { item.mediaType };
-        case (?newMediaType) { newMediaType };
-      };
+      title = switch (title) { case (null) { item.title }; case (?t) { t } };
+      category = switch (category) { case (null) { item.category }; case (?c) { c } };
+      media = switch (media) { case (null) { item.media }; case (?m) { m } };
+      mediaType = switch (mediaType) { case (null) { item.mediaType }; case (?mt) { mt } };
       createdAt = item.createdAt;
-      description = switch (description) {
-        case (null) { item.description };
-        case (?newDescription) { newDescription };
-      };
+      description = switch (description) { case (null) { item.description }; case (?d) { d } };
     };
     let newArray = Array.tabulate(
       portfolioItems.size(),
-      func(i) {
-        if (i == index) { updatedItem } else { portfolioItems.at(i) };
-      },
+      func(i) { if (i == index) { updatedItem } else { portfolioItems.at(i) } },
     );
     portfolioItems := List.fromArray(newArray);
   };
 
-  // Helper function for moving portfolio items to the end (admin only)
   func movePortfolioItemToEndInternal(index : Nat) {
     if (index >= portfolioItems.size()) {
       Runtime.trap("Index out of bounds");
@@ -147,7 +149,6 @@ actor {
   include MixinStorage();
   include MixinAuthorization(accessControlState);
 
-  // Claim admin access - only the first caller becomes admin (one-time operation)
   public shared ({ caller }) func claimAdminAccess() : async () {
     if (caller.isAnonymous()) {
       Runtime.trap("Anonymous callers cannot claim admin access");
@@ -159,12 +160,10 @@ actor {
     accessControlState.adminAssigned := true;
   };
 
-  // Public operation - no auth required
   public query func getPortfolioItems() : async [PortfolioItem] {
     portfolioItems.toArray();
   };
 
-  // Admin-only operation
   public shared ({ caller }) func addPortfolioItem(title : Text, category : Text, media : Storage.ExternalBlob, mediaType : Text, description : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can add portfolio items");
@@ -172,7 +171,6 @@ actor {
     addPortfolioItemInternal(title, category, media, mediaType, description);
   };
 
-  // Admin-only operation
   public shared ({ caller }) func deletePortfolioItem(index : Nat) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can delete portfolio items");
@@ -180,7 +178,6 @@ actor {
     deletePortfolioItemInternal(index);
   };
 
-  // Admin-only operation
   public shared ({ caller }) func reorderPortfolioItems(moves : [ReorderPortfolioItem]) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can reorder portfolio items");
@@ -188,7 +185,6 @@ actor {
     reorderPortfolioItemsInternal(moves);
   };
 
-  // Admin-only operation
   public shared ({ caller }) func invertOrderPortfolioItem() : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can reorder portfolio items");
@@ -196,7 +192,6 @@ actor {
     invertOrderPortfolioItemInternal();
   };
 
-  // Admin-only operation
   public shared ({ caller }) func updatePortfolioItem(index : Nat, title : ?Text, category : ?Text, media : ?Storage.ExternalBlob, mediaType : ?Text, description : ?Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can update portfolio items");
@@ -204,7 +199,6 @@ actor {
     updatePortfolioItemInternal(index, title, category, media, mediaType, description);
   };
 
-  // Admin-only operation
   public shared ({ caller }) func movePortfolioItemToEnd(index : Nat) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Only admins can reorder portfolio items");
