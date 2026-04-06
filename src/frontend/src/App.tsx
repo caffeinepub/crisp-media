@@ -36,7 +36,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SiTiktok } from "react-icons/si";
-import { ExternalBlob, type PortfolioItem, UserRole } from "./backend";
+import { ExternalBlob, type PortfolioItem } from "./backend";
 import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 
@@ -1965,13 +1965,7 @@ function Footer() {
 // ── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background:
-          "linear-gradient(135deg, #0B2A76 0%, #071432 50%, #050A1A 100%)",
-      }}
-    >
+    <div className="min-h-screen">
       <Navbar />
       <main>
         <HeroSection />

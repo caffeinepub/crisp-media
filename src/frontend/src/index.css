@@ -85,7 +85,12 @@
 
   body {
     @apply text-foreground;
-    background: linear-gradient(135deg, #0b2a76 0%, #071432 50%, #050a1a 100%);
+    background-color: #071432;
+    background-image: url("/assets/gradient-019d6192-bcff-73bc-810e-01cc9ed9883a.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     min-height: 100vh;
     font-family: "Plus Jakarta Sans", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;

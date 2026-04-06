@@ -24,12 +24,13 @@ export function useActor() {
         },
       };
 
+      // NOTE: Do NOT call _initializeAccessControlWithSecret here.
+      // That function crashes the canister when the env variable is not set.
+      // Admin access is granted exclusively via claimAdminAccess().
       const actor = await createActorWithConfig(actorOptions);
       return actor;
     },
-    // Only refetch when identity changes
     staleTime: Number.POSITIVE_INFINITY,
-    // This will cause the actor to be recreated when the identity changes
     enabled: true,
   });
 
