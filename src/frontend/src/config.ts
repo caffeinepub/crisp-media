@@ -116,6 +116,10 @@ async function maybeLoadMockBackend(): Promise<backendInterface | null> {
   }
 }
 
+// Prefix used to identify URL-only blobs stored in backend (avoids CORS fetch)
+const URL_BLOB_PREFIX = "!url!";
+const MOTOKO_DEDUPLICATION_SENTINEL = "!caf!";
+
 export async function createActorWithConfig(
   options?: CreateActorOptions,
 ): Promise<backendInterface> {
@@ -153,9 +157,15 @@ export async function createActorWithConfig(
     agent,
   );
 
-  const MOTOKO_DEDUPLICATION_SENTINEL = "!caf!";
-
   const uploadFile = async (file: ExternalBlob): Promise<Uint8Array> => {
+    // If this blob has no raw bytes (URL-only), store the URL directly
+    // as UTF-8 bytes with a special prefix. This avoids CORS failures
+    // when trying to fetch Google Drive or other external URLs.
+    if (!file._blob) {
+      const urlBytes = new TextEncoder().encode(URL_BLOB_PREFIX + file.getDirectURL());
+      return urlBytes;
+    }
+
     const { hash } = await storageClient.putFile(
       await file.getBytes(),
       file.onProgress,
@@ -164,8 +174,16 @@ export async function createActorWithConfig(
   };
 
   const downloadFile = async (bytes: Uint8Array): Promise<ExternalBlob> => {
-    const hashWithPrefix = new TextDecoder().decode(new Uint8Array(bytes));
-    const hash = hashWithPrefix.substring(MOTOKO_DEDUPLICATION_SENTINEL.length);
+    const decoded = new TextDecoder().decode(new Uint8Array(bytes));
+
+    // URL-only blob: restore the URL directly without storage lookup
+    if (decoded.startsWith(URL_BLOB_PREFIX)) {
+      const url = decoded.substring(URL_BLOB_PREFIX.length);
+      return ExternalBlob.fromURL(url);
+    }
+
+    // Regular file stored in blob storage: resolve via hash
+    const hash = decoded.substring(MOTOKO_DEDUPLICATION_SENTINEL.length);
     const url = await storageClient.getDirectURL(hash);
     return ExternalBlob.fromURL(url);
   };
