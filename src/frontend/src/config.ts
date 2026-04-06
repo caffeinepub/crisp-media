@@ -116,6 +116,9 @@ async function maybeLoadMockBackend(): Promise<backendInterface | null> {
   }
 }
 
+const URL_PREFIX = "!url!";
+const MOTOKO_DEDUPLICATION_SENTINEL = "!caf!";
+
 export async function createActorWithConfig(
   options?: CreateActorOptions,
 ): Promise<backendInterface> {
@@ -153,17 +156,16 @@ export async function createActorWithConfig(
     agent,
   );
 
-  const MOTOKO_DEDUPLICATION_SENTINEL = "!caf!";
-  // Prefix used to identify URL-only blobs stored directly (e.g. Google Drive links)
-  const URL_PREFIX = "!url!";
-
   const uploadFile = async (file: ExternalBlob): Promise<Uint8Array> => {
-    // A URL-only blob (created via ExternalBlob.fromURL) has _blob === null.
-    // Do NOT call getBytes() on it -- that would do a cross-origin fetch and fail with CORS.
-    // Instead, store the URL string directly with a prefix.
-    if (file._blob === null || file._blob === undefined) {
-      const directUrl = file.getDirectURL();
-      return new TextEncoder().encode(URL_PREFIX + directUrl);
+    // Check if this is a URL-only blob (e.g. a Google Drive link)
+    // ExternalBlob.fromURL() creates a blob with a directURL but no raw bytes.
+    // Calling getBytes() on it would trigger a CORS-blocked fetch, so we
+    // detect this case and store the URL directly instead.
+    const directURL = file.getDirectURL ? file.getDirectURL() : null;
+    if (directURL) {
+      // Store the URL as UTF-8 bytes with a !url! prefix so we can detect
+      // it on retrieval and reconstruct the URL without hitting the storage gateway.
+      return new TextEncoder().encode(URL_PREFIX + directURL);
     }
     const { hash } = await storageClient.putFile(
       await file.getBytes(),
@@ -174,11 +176,12 @@ export async function createActorWithConfig(
 
   const downloadFile = async (bytes: Uint8Array): Promise<ExternalBlob> => {
     const decoded = new TextDecoder().decode(new Uint8Array(bytes));
+    // If this was stored as a direct URL, reconstruct it immediately
     if (decoded.startsWith(URL_PREFIX)) {
-      // This was stored as a direct URL -- reconstruct without hitting storage gateway
       const url = decoded.slice(URL_PREFIX.length);
       return ExternalBlob.fromURL(url);
     }
+    // Otherwise it's a storage gateway hash
     const hash = decoded.substring(MOTOKO_DEDUPLICATION_SENTINEL.length);
     const url = await storageClient.getDirectURL(hash);
     return ExternalBlob.fromURL(url);
