@@ -116,10 +116,6 @@ async function maybeLoadMockBackend(): Promise<backendInterface | null> {
   }
 }
 
-// Prefix used to identify URL-only blobs stored in backend (avoids CORS fetch)
-const URL_BLOB_PREFIX = "!url!";
-const MOTOKO_DEDUPLICATION_SENTINEL = "!caf!";
-
 export async function createActorWithConfig(
   options?: CreateActorOptions,
 ): Promise<backendInterface> {
@@ -157,15 +153,18 @@ export async function createActorWithConfig(
     agent,
   );
 
-  const uploadFile = async (file: ExternalBlob): Promise<Uint8Array> => {
-    // If this blob has no raw bytes (URL-only), store the URL directly
-    // as UTF-8 bytes with a special prefix. This avoids CORS failures
-    // when trying to fetch Google Drive or other external URLs.
-    if (!file._blob) {
-      const urlBytes = new TextEncoder().encode(URL_BLOB_PREFIX + file.getDirectURL());
-      return urlBytes;
-    }
+  const MOTOKO_DEDUPLICATION_SENTINEL = "!caf!";
+  // Prefix used to store URL-only blobs (e.g. Google Drive embed links)
+  // without fetching the remote resource (which would be CORS-blocked).
+  const URL_BLOB_SENTINEL = "!url!";
 
+  const uploadFile = async (file: ExternalBlob): Promise<Uint8Array> => {
+    // If the blob has no raw bytes, it is a URL-only reference (e.g. a Google
+    // Drive embed link). Store the URL as plain text with a sentinel prefix so
+    // we never attempt a CORS-blocked fetch.
+    if (!file._blob) {
+      return new TextEncoder().encode(URL_BLOB_SENTINEL + file.getDirectURL());
+    }
     const { hash } = await storageClient.putFile(
       await file.getBytes(),
       file.onProgress,
@@ -175,14 +174,12 @@ export async function createActorWithConfig(
 
   const downloadFile = async (bytes: Uint8Array): Promise<ExternalBlob> => {
     const decoded = new TextDecoder().decode(new Uint8Array(bytes));
-
-    // URL-only blob: restore the URL directly without storage lookup
-    if (decoded.startsWith(URL_BLOB_PREFIX)) {
-      const url = decoded.substring(URL_BLOB_PREFIX.length);
+    // URL-only blob: restore the original URL directly.
+    if (decoded.startsWith(URL_BLOB_SENTINEL)) {
+      const url = decoded.substring(URL_BLOB_SENTINEL.length);
       return ExternalBlob.fromURL(url);
     }
-
-    // Regular file stored in blob storage: resolve via hash
+    // Regular blob stored in blob storage.
     const hash = decoded.substring(MOTOKO_DEDUPLICATION_SENTINEL.length);
     const url = await storageClient.getDirectURL(hash);
     return ExternalBlob.fromURL(url);
